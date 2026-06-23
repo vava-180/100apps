@@ -1,0 +1,24 @@
+name: day101_app_hub
+description: "100apps Day101 スマホアプリをひとまとめにしたハブ（非表示機能つき）"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # 非表示にしたアプリを記憶する（端末内に保存・ネット通信なし）
+  shared_preferences: ^2.2.0
+  # QRコードを描く（オフライン動作・ネット通信なし）
+  qr_flutter: ^4.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon.png
