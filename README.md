@@ -143,4 +143,5 @@ Day 048〜059 は並行して制作中。
 |----:|--------|:----:|:----:|
 | 091 | 数当てゲーム | ✅ | [index.html](day091-number-guessing/index.html) |
 | 092 | タイピング練習 | ✅ | [index.html](day092-typing-practice/index.html) |
+| 093 | 画像加工ツール（Pillow） | ✅ | [image_editor.py](day093-image-editor/image_editor.py) |
 
