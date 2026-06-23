@@ -86,7 +86,7 @@
 
 ### PowerPoint（Day 56–61）
 - [x] Day 056 表を PowerPoint スライドへ自動転記（Excel→PPT）
-- [ ] Day 057 PowerPoint 目次スライド自動生成（PPT）
+- [x] Day 057 PowerPoint 目次スライド自動生成（PPT）
 - [ ] Day 058 全スライドのフォント統一（PPT）
 - [ ] Day 059 画像を一括でスライド化（PPT）
 - [x] Day 060 スライドの文字を一括差し替え（PPT）
