@@ -75,7 +75,7 @@
 - [x] Day 045 ふりがな自動付与（Excel）
 - [x] Day 046 住所分割：都道府県／市区町村（Excel）
 - [x] Day 047 勤怠集計マクロ（Excel）
-- [ ] Day 048 請求書テンプレ一括出力（Excel）
+- [x] Day 048 請求書テンプレ一括出力（Excel）
 - [ ] Day 049 グラフ一括作成（Excel）
 - [ ] Day 050 印刷範囲・ページ設定の一括適用（Excel）
 - [ ] Day 051 不要シート・空白行の一括削除（Excel）
@@ -90,24 +90,24 @@
 - [ ] Day 058 全スライドのフォント統一（PPT）
 - [ ] Day 059 画像を一括でスライド化（PPT）
 - [x] Day 060 スライドの文字を一括差し替え（PPT）
-- [ ] Day 061 PPTファイルのMarkdown化：スライド内容をMarkdownに書き出し（PPT）
+- [x] Day 061 PPTファイルのMarkdown化：スライド内容をMarkdownに書き出し（PPT）
 
 ### Outlook（Day 62–65）
-- [ ] Day 062 Outlook 一斉メール下書き作成：差し込み（Outlook）
-- [ ] Day 063 受信メール一覧を Excel に書き出し（Outlook）
-- [ ] Day 064 添付ファイル一括保存（Outlook）
-- [ ] Day 065 定型メールのテンプレ送信補助（Outlook）
+- [x] Day 062 Outlook 一斉メール下書き作成：差し込み（Outlook）
+- [x] Day 063 受信メール一覧を Excel に書き出し（Outlook）
+- [x] Day 064 添付ファイル一括保存（Outlook）
+- [x] Day 065 定型メールのテンプレ送信補助（Outlook）
 
 ---
 
 ## フェーズ4：スマホアプリ（Flutter）  Day 66–90 … ※たたき台
 > Flutter 環境のセットアップが前提。最初の1本でビルド～実機/エミュ確認まで通す。
 
-- [ ] Day 066 カウンター（Flutter入門）
-- [ ] Day 067 メモ帳
-- [ ] Day 068 ToDoアプリ
-- [ ] Day 069 買い物リスト
-- [ ] Day 070 家計簿
+- [x] Day 066 カウンター（Flutter入門）
+- [x] Day 067 メモ帳
+- [x] Day 068 ToDoアプリ
+- [x] Day 069 買い物リスト
+- [x] Day 070 家計簿
 - [ ] Day 071 体重記録
 - [ ] Day 072 習慣トラッカー
 - [ ] Day 073 タイマー／ストップウォッチ
