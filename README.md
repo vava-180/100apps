@@ -69,8 +69,9 @@ IT初心者が、100日間で100個のアプリを作る記録です。
 | 036 | ZIP一括 圧縮・解凍 | ✅ | [zip_tool.py](day036-zip-tool/zip_tool.py) |
 | 037 | 差し込みテキスト量産 | ✅ | [merge_text.py](day037-mail-merge/merge_text.py) |
 | 038 | PDFテキスト抽出 | ✅ | [extract_text.py](day038-pdf-extract/extract_text.py) |
+| 039 | 複数Excel→1ブック集約 | ✅ | [merge_excel.py](day039-excel-merge/merge_excel.py) |
 
-Day 039 以降も順次追加予定。
+Day 040 以降も順次追加予定。
 
 ### フェーズ3：VBA / Office自動化（Day 41–65）
 Excel→PowerPoint自動貼り付け、Outlook一括下書き、書類の差し込み量産 など
