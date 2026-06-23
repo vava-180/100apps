@@ -136,8 +136,8 @@
 - [x] Day 091 数当てゲーム（number-guessing）
 - [x] Day 092 タイピング練習（typing-practice）
 - [x] Day 093 画像加工ツール（image-editor / Pillow）
-- [ ] Day 094 Markdown→HTML 変換サイト
-- [ ] Day 095 簡易API（FastAPI、ローカル）
+- [x] Day 094 Markdown→HTML 変換サイト（markdown-to-html）
+- [x] Day 095 簡易API（FastAPI、ローカル / fastapi-memo）
 - [ ] Day 096 ポートフォリオサイト
 - [ ] Day 097 100apps 記録サイト（一覧自動生成）
 - [ ] Day 098 ミニ機械学習デモ（ローカル）
