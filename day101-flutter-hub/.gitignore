@@ -1,0 +1,6 @@
+# Flutterのビルド成果物・自動生成物（コミットしない）
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+pubspec.lock
