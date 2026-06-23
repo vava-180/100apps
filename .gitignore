@@ -5,3 +5,6 @@ __pycache__/
 # OS・エディタの一時ファイル
 .DS_Store
 Thumbs.db
+
+# 生成スクリプト（ローカル保持・GitHubには出さない）
+tools/
