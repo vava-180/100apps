@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>単位換算ツール</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+
+  /* 種類タブ */
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .tab {
+    border: 1px solid var(--border); background: var(--card); color: var(--sub);
+    border-radius: 999px; padding: 7px 16px; font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tab:hover { opacity: .92; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+  .conv { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: end; }
+  label { display: block; font-size: 0.8rem; color: var(--sub); margin-bottom: 6px; }
+  input[type="number"], select {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 9px;
+    font-size: 1rem; font-family: inherit; outline: none; background: #fff;
+  }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .swap {
+    border: 1px solid var(--border); background: #f3f6ff; color: var(--accent);
+    border-radius: 9px; width: 42px; height: 44px; font-size: 1.1rem; cursor: pointer;
+    margin-bottom: 1px;
+  }
+  .swap:hover { background: #e7eeff; }
+  .result {
+    margin-top: 20px; padding-top: 18px; border-top: 1px dashed var(--border);
+    font-size: 1.1rem; text-align: center;
+  }
+  .result b { color: var(--accent); font-size: 1.35rem; }
+  .result .small { color: var(--sub); font-size: 0.85rem; }
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+  @media (max-width: 480px) {
+    .conv { grid-template-columns: 1fr; }
+    .swap { width: 100%; transform: rotate(90deg); margin: 4px 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>単位換算ツール</h1>
+    <p class="lead">長さ・重さ・温度などをまとめて換算します。すべてブラウザ内で計算します（ネット通信なし）。</p>
+
+    <div class="tabs" id="tabs"></div>
+
+    <div class="card">
+      <div class="conv">
+        <div>
+          <label>変換元</label>
+          <input type="number" id="fromVal" value="1" step="any">
+          <select id="fromUnit" style="margin-top:8px;"></select>
+        </div>
+        <button class="swap" id="swap" title="入れ替え">⇄</button>
+        <div>
+          <label>変換先</label>
+          <input type="text" id="toVal" readonly style="background:#f7f8fa;">
+          <select id="toUnit" style="margin-top:8px;"></select>
+        </div>
+      </div>
+      <div class="result" id="result">―</div>
+    </div>
+
+    <footer>Day 12 / 100 — Unit Converter</footer>
+  </div>
+
+<script>
+  // 単位の定義。
+  // ふつうの単位は「基準1つあたりの倍率(factor)」で表す（例: 1km = 1000m なので km は 1000）。
+  // 温度だけは倍率では表せない（0の位置がズレる）ので、変換の関数を直接持たせる。
+  const CATEGORIES = {
+    length: {
+      name: '長さ',
+      base: 'm',
+      units: { 'mm': 0.001, 'cm': 0.01, 'm': 1, 'km': 1000, 'inch': 0.0254, 'feet': 0.3048, 'mile': 1609.344 }
+    },
+    weight: {
+      name: '重さ',
+      base: 'g',
+      units: { 'mg': 0.001, 'g': 1, 'kg': 1000, 't（トン）': 1000000, 'oz（オンス）': 28.349523125, 'lb（ポンド）': 453.59237 }
+    },
+    area: {
+      name: '面積',
+      base: 'm²',
+      units: { 'cm²': 0.0001, 'm²': 1, 'km²': 1000000, '畳（帖）': 1.62, '坪': 3.305785, 'ha（ヘクタール）': 10000, 'a（アール）': 100 }
+    },
+    volume: {
+      name: '体積',
+      base: 'L',
+      units: { 'mL': 0.001, 'L': 1, 'm³': 1000, '合': 0.18039, '升': 1.8039, 'gallon（米）': 3.785411784 }
+    },
+    speed: {
+      name: '速さ',
+      base: 'm/s',
+      units: { 'm/s': 1, 'km/h': 1 / 3.6, 'mph': 0.44704, 'knot（ノット）': 0.514444 }
+    },
+    temp: {
+      name: '温度',
+      special: true,
+      // 各単位 → セ氏(℃) と セ氏 → 各単位 の変換式
+      units: {
+        '℃': { toC: c => c, fromC: c => c },
+        '℉': { toC: f => (f - 32) * 5 / 9, fromC: c => c * 9 / 5 + 32 },
+        'K': { toC: k => k - 273.15, fromC: c => c + 273.15 }
+      }
+    }
+  };
+
+  const el = id => document.getElementById(id);
+  const fromUnitEl = el('fromUnit'), toUnitEl = el('toUnit');
+  let current = 'length';
+
+  // 数を読みやすく整える
+  function fmt(n) {
+    if (!isFinite(n)) return '―';
+    if (n === 0) return '0';
+    const abs = Math.abs(n);
+    // とても小さい/大きい値は指数表記にして「0表示」や桁あふれを防ぐ
+    if (abs < 1e-6 || abs >= 1e15) return n.toExponential(6);
+    // 整数はそのまま3桁区切り（同じ単位の変換で値が変わらないように）
+    if (Number.isInteger(n)) return n.toLocaleString('ja-JP');
+    // 小数は最大8桁まで（末尾の余計な0は自動で消える）
+    return n.toLocaleString('ja-JP', { maximumFractionDigits: 8 });
+  }
+
+  // タブ（種類）を作る
+  function buildTabs() {
+    el('tabs').innerHTML = '';
+    for (const key in CATEGORIES) {
+      const b = document.createElement('button');
+      b.className = 'tab' + (key === current ? ' active' : '');
+      b.textContent = CATEGORIES[key].name;
+      b.addEventListener('click', () => { current = key; buildTabs(); buildUnits(); convert(); });
+      el('tabs').appendChild(b);
+    }
+  }
+
+  // 選んだ種類の単位を、2つのプルダウンに入れる
+  function buildUnits() {
+    const units = Object.keys(CATEGORIES[current].units);
+    [fromUnitEl, toUnitEl].forEach((sel, idx) => {
+      sel.innerHTML = '';
+      units.forEach(u => {
+        const o = document.createElement('option');
+        o.value = u; o.textContent = u;
+        sel.appendChild(o);
+      });
+      // 初期は「1番目→2番目」を選んでおくと分かりやすい
+      sel.selectedIndex = idx === 0 ? 0 : Math.min(1, units.length - 1);
+    });
+  }
+
+  // 実際に換算する
+  function convert() {
+    const cat = CATEGORIES[current];
+    const input = parseFloat(el('fromVal').value);
+    if (isNaN(input)) { el('toVal').value = ''; el('result').textContent = '数値を入力してください'; return; }
+
+    const from = fromUnitEl.value, to = toUnitEl.value;
+    let result;
+    if (cat.special) {
+      // ケルビン(K)は0未満が存在しない（絶対零度より低い温度はない）
+      if (from === 'K' && input < 0) {
+        el('toVal').value = ''; el('result').textContent = 'ケルビン(K)は0以上で入力してください'; return;
+      }
+      // 温度: いったんセ氏(℃)に直してから、目的の単位に変換する
+      const c = cat.units[from].toC(input);
+      result = cat.units[to].fromC(c);
+    } else {
+      // ふつうの単位: 基準に直してから(値×元の倍率)、目的の倍率で割る
+      const baseValue = input * cat.units[from];
+      result = baseValue / cat.units[to];
+    }
+    el('toVal').value = fmt(result);
+    el('result').innerHTML = `${fmt(input)} ${from} = <b>${fmt(result)}</b> ${to}`;
+  }
+
+  // 変換元と変換先の単位を入れ替える
+  el('swap').addEventListener('click', () => {
+    const tmp = fromUnitEl.value;
+    fromUnitEl.value = toUnitEl.value;
+    toUnitEl.value = tmp;
+    convert();
+  });
+
+  el('fromVal').addEventListener('input', convert);
+  fromUnitEl.addEventListener('change', convert);
+  toUnitEl.addEventListener('change', convert);
+
+  // 起動時の準備
+  buildTabs();
+  buildUnits();
+  convert();
+</script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>テキスト整形ツール</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text);
+    resize: vertical;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+  .tools button {
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+    border-radius: 999px; padding: 8px 16px; font-size: 0.85rem; cursor: pointer;
+    font-family: inherit; transition: background .15s, border-color .15s;
+  }
+  .tools button:hover { background: #eef2ff; border-color: var(--accent); color: var(--accent); }
+  .row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .row .primary {
+    border: none; background: var(--accent); color: #fff; border-radius: 10px;
+    padding: 12px 22px; font-size: 0.95rem; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .row .ghost {
+    border: none; background: #eceef2; color: var(--text); border-radius: 10px;
+    padding: 12px 18px; font-size: 0.9rem; cursor: pointer; font-family: inherit;
+  }
+  .row .copy {
+    margin-left: auto; border: none; background: #eceef2; color: var(--text);
+    border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; cursor: pointer; font-family: inherit;
+  }
+  button:hover { opacity: .92; }
+  .label { font-size: 0.85rem; color: var(--sub); margin: 6px 0 8px; }
+  footer { margin-top: 28px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>テキスト整形ツール</h1>
+    <p class="lead">コピペした文章の「いらない空白・空行・改行」をワンクリックで掃除します。</p>
+
+    <div class="label">入力</div>
+    <textarea id="input" placeholder="整形したいテキストを貼り付けてください…"></textarea>
+
+    <div class="tools">
+      <button data-act="trimLines">行頭・行末の空白を削除</button>
+      <button data-act="collapseSpace">連続スペースを1つに</button>
+      <button data-act="blankLines">連続する空行を1つに</button>
+      <button data-act="removeBlank">空行をすべて削除</button>
+      <button data-act="joinLines">改行をなくして1行に</button>
+      <button data-act="fullToHalfSpace">全角スペースを半角に</button>
+    </div>
+
+    <div class="row">
+      <button class="primary" id="apply">整形して下に表示</button>
+      <button class="ghost" id="clear">クリア</button>
+    </div>
+
+    <div class="row">
+      <div class="label" style="margin:0;">結果</div>
+      <button class="copy" id="copy">コピー</button>
+    </div>
+    <textarea id="output" readonly placeholder="ここに結果が表示されます…"></textarea>
+
+    <footer>Day 3 / 100 — Text Formatter</footer>
+  </div>
+
+<script>
+  const input = document.getElementById('input');
+  const output = document.getElementById('output');
+  // 選んだ整形メニューを覚えておく（複数選択できる）
+  const selected = new Set();
+
+  // 各整形処理の中身（受け取った文字列を整形して返す）
+  const actions = {
+    trimLines: t => t.split('\n').map(l => l.trim()).join('\n'),
+    collapseSpace: t => t.replace(/[ \t]{2,}/g, ' '),
+    blankLines: t => t.replace(/\n{3,}/g, '\n\n'),
+    removeBlank: t => t.split('\n').filter(l => l.trim() !== '').join('\n'),
+    joinLines: t => t.replace(/\r?\n/g, ''),
+    fullToHalfSpace: t => t.replace(/　/g, ' '),
+  };
+
+  // メニューボタンの選択トグル（押すたびにオン/オフ）
+  document.querySelectorAll('.tools button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const act = btn.dataset.act;
+      if (selected.has(act)) { selected.delete(act); btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = ''; }
+      else { selected.add(act); btn.style.background = '#eef2ff'; btn.style.color = '#4f7cff'; btn.style.borderColor = '#4f7cff'; }
+    });
+  });
+
+  // 選んだ整形を上から順番にすべて適用する
+  document.getElementById('apply').addEventListener('click', () => {
+    if (selected.size === 0) { output.value = input.value; return; }
+    let text = input.value;
+    // ボタンの並び順どおりに適用する
+    document.querySelectorAll('.tools button').forEach(btn => {
+      const act = btn.dataset.act;
+      if (selected.has(act)) text = actions[act](text);
+    });
+    output.value = text;
+  });
+
+  document.getElementById('clear').addEventListener('click', () => {
+    input.value = ''; output.value = ''; input.focus();
+  });
+  document.getElementById('copy').addEventListener('click', async () => {
+    if (!output.value) return;
+    await navigator.clipboard.writeText(output.value);
+    const btn = document.getElementById('copy');
+    btn.textContent = 'コピーしました';
+    setTimeout(() => btn.textContent = 'コピー', 1200);
+  });
+</script>
+</body>
+</html>

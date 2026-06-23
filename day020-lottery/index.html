@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>おみくじ／抽選ツール</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+
+  /* 結果表示 */
+  .stage {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 36px 20px; text-align: center; margin-bottom: 20px; min-height: 130px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .stage .result {
+    font-size: 2rem; font-weight: 800; word-break: break-word; line-height: 1.3;
+  }
+  .stage .result.spin { color: var(--sub); opacity: .7; }
+  .stage .hint { color: var(--sub); font-size: 0.88rem; }
+  .stage ol { text-align: left; margin: 0; padding-left: 1.4em; font-size: 1.05rem; }
+  .stage ol li { padding: 3px 0; }
+
+  label { display: block; font-size: 0.82rem; color: var(--sub); margin: 0 0 6px; }
+  textarea {
+    width: 100%; min-height: 150px; padding: 14px; border: 1px solid var(--border);
+    border-radius: 12px; font-family: inherit; font-size: 0.95rem; line-height: 1.7;
+    resize: vertical; outline: none; background: var(--card);
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .opt { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; font-size: 0.9rem; }
+  .opt input[type="number"] { width: 70px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; text-align: center; outline: none; }
+  .opt input:focus { border-color: var(--accent); }
+
+  .btns { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .btns button {
+    flex: 1; min-width: 140px; border: none; border-radius: 11px; padding: 14px; font-size: 0.98rem;
+    font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .primary { background: var(--accent); color: #fff; }
+  .ghost { background: #eceef2; color: var(--text); }
+  .btns button:hover { opacity: .92; }
+  .btns button:disabled { opacity: .5; cursor: default; }
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>おみくじ／抽選ツール</h1>
+    <p class="lead">候補を入れて、ランダムに選びます。重複なしの抽選・並べ替えもできます（ネット通信なし）。</p>
+
+    <div class="stage">
+      <div class="result hint" id="result">候補を入れて、下のボタンを押してください</div>
+    </div>
+
+    <label>候補（1行に1つ）</label>
+    <textarea id="items" placeholder="山田&#10;田中&#10;佐藤&#10;鈴木"></textarea>
+
+    <div class="opt">
+      <span>重複なしで</span>
+      <input type="number" id="pickN" min="1" value="1">
+      <span>人／個を選ぶ</span>
+    </div>
+
+    <div class="btns">
+      <button class="primary" id="oneBtn">1つ選ぶ（おみくじ）</button>
+      <button class="primary" id="pickBtn">重複なしで選ぶ</button>
+      <button class="ghost" id="orderBtn">全部の順番を決める</button>
+    </div>
+
+    <footer>Day 20 / 100 — Lottery & Omikuji</footer>
+  </div>
+
+<script>
+  const el = id => document.getElementById(id);
+
+  // 安全な乱数で 0以上max未満の整数を返す（剰余のかたよりを除く）
+  function randomInt(max) {
+    if (!Number.isSafeInteger(max) || max < 1 || max > 0x100000000) {
+      throw new RangeError('randomInt: max は 1〜2^32 の整数で指定してください');
+    }
+    const limit = Math.floor(0x100000000 / max) * max;
+    const buf = new Uint32Array(1);
+    let n;
+    do { crypto.getRandomValues(buf); n = buf[0]; } while (n >= limit);
+    return n % max;
+  }
+
+  // 配列をシャッフルする（Fisher-Yates法・元の配列は変えずにコピーを返す）
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // 入力欄から候補の配列を作る（空行・前後の空白は除く）
+  function getItems() {
+    return el('items').value.split('\n').map(s => s.trim()).filter(s => s !== '');
+  }
+
+  let spinning = false;
+
+  // 「1つ選ぶ」：くるくる回ってから止まる演出つき
+  function pickOne() {
+    const items = getItems();
+    if (!validate(items, 1)) return;
+    if (spinning) return;
+    spinning = true;
+    setButtons(false);
+
+    const result = el('result');
+    result.classList.remove('hint');
+    let count = 0;
+    const totalSpins = 14;       // 何回パラパラ切り替えるか
+    let delay = 50;
+
+    function step() {
+      // 表示をランダムな候補に次々切り替える（回っている演出）
+      result.textContent = items[randomInt(items.length)];
+      result.classList.add('spin');
+      count++;
+      if (count < totalSpins) {
+        delay += 14; // だんだん遅くする
+        setTimeout(step, delay);
+      } else {
+        // 最後に本当の結果を決めて表示
+        result.classList.remove('spin');
+        result.textContent = items[randomInt(items.length)];
+        spinning = false;
+        setButtons(true);
+      }
+    }
+    step();
+  }
+
+  // 「重複なしで選ぶ」：シャッフルして上からN個
+  function pickN() {
+    const items = getItems();
+    let n = parseInt(el('pickN').value, 10);
+    if (isNaN(n) || n < 1) n = 1;
+    if (!validate(items, n)) return;
+
+    const winners = shuffle(items).slice(0, n);
+    showList(winners, n === 1);
+  }
+
+  // 「全部の順番を決める」：全員シャッフルして並べる
+  function orderAll() {
+    const items = getItems();
+    if (!validate(items, 1)) return;
+    showList(shuffle(items), false);
+  }
+
+  // 結果を表示する（1つなら大きく、複数なら番号付きリスト）
+  function showList(arr, single) {
+    const result = el('result');
+    result.classList.remove('hint', 'spin');
+    if (single) {
+      result.innerHTML = '';
+      result.textContent = arr[0];
+    } else {
+      result.innerHTML = '<ol>' + arr.map(x => `<li>${escapeHtml(x)}</li>`).join('') + '</ol>';
+    }
+  }
+
+  // 入力のチェック（候補が足りないときは案内を出す）
+  function validate(items, need) {
+    const result = el('result');
+    if (items.length === 0) {
+      result.classList.add('hint'); result.textContent = '候補を1行に1つ入力してください。';
+      return false;
+    }
+    if (items.length < need) {
+      result.classList.add('hint'); result.textContent = `候補が${items.length}個しかありません。選ぶ数を減らしてください。`;
+      return false;
+    }
+    return true;
+  }
+
+  function setButtons(enabled) {
+    // 演出中はボタンに加えて、候補欄と人数も触れないようにする
+    // （回している途中で候補を変えても結果に反映されず混乱するため）
+    [el('oneBtn'), el('pickBtn'), el('orderBtn'), el('items'), el('pickN')].forEach(b => b.disabled = !enabled);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  el('oneBtn').addEventListener('click', pickOne);
+  el('pickBtn').addEventListener('click', pickN);
+  el('orderBtn').addEventListener('click', orderAll);
+</script>
+</body>
+</html>

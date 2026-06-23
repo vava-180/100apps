@@ -1,0 +1,7 @@
+# Python の自動生成キャッシュ
+__pycache__/
+*.pyc
+
+# OS・エディタの一時ファイル
+.DS_Store
+Thumbs.db

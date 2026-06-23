@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>画像リサイズ・圧縮</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+  .drop {
+    border: 2px dashed var(--border); border-radius: 16px; background: var(--card);
+    padding: 40px 20px; text-align: center; color: var(--sub); cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .drop.drag { border-color: var(--accent); background: #eef2ff; }
+  .drop strong { color: var(--accent); }
+  input[type="file"] { display: none; }
+  .panel { display: none; margin-top: 24px; }
+  .panel.show { display: block; }
+  .controls { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  label { display: block; font-size: 0.8rem; color: var(--sub); margin-bottom: 6px; }
+  .field { margin-bottom: 16px; }
+  .row2 { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: end; }
+  input[type="number"] {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 0.95rem; font-family: inherit; outline: none;
+  }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .lock { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--sub); cursor: pointer; }
+  .quality-row { display: flex; align-items: center; gap: 12px; }
+  input[type="range"] { flex: 1; }
+  select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; }
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  .pv { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; }
+  .pv h3 { font-size: 0.85rem; margin: 0 0 10px; color: var(--sub); font-weight: 600; }
+  .pv img { max-width: 100%; max-height: 240px; border-radius: 6px; }
+  .pv .size { font-size: 0.8rem; color: var(--sub); margin-top: 8px; }
+  .bar { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+  button {
+    border: none; border-radius: 10px; padding: 12px 22px; font-size: 0.95rem;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .primary { background: var(--accent); color: #fff; }
+  .ghost { background: #eceef2; color: var(--text); }
+  button:hover { opacity: .92; }
+  .badge { display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: #e6f6ec; color: #1d8a4f; margin-left: 6px; }
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+  @media (max-width: 560px) { .preview-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>画像リサイズ・圧縮</h1>
+    <p class="lead">画像を読み込んでサイズ変更・圧縮します。画像はパソコンの外に送られません（ネット通信なし）。</p>
+
+    <div class="drop" id="drop">
+      <p>ここに画像をドラッグ＆ドロップ<br>または <strong>クリックして選ぶ</strong></p>
+      <input type="file" id="file" accept="image/*">
+    </div>
+
+    <div class="panel" id="panel">
+      <div class="controls">
+        <div class="field">
+          <div class="row2">
+            <div>
+              <label>幅（px）</label>
+              <input type="number" id="width" min="1">
+            </div>
+            <div style="padding-bottom:9px;color:var(--sub);">×</div>
+            <div>
+              <label>高さ（px）</label>
+              <input type="number" id="height" min="1">
+            </div>
+          </div>
+          <label class="lock" style="margin-top:10px;">
+            <input type="checkbox" id="keepRatio" checked> 縦横の比率を保つ
+          </label>
+        </div>
+
+        <div class="field">
+          <label>出力形式</label>
+          <select id="format">
+            <option value="image/jpeg">JPEG（写真向き・軽い）</option>
+            <option value="image/png">PNG（透過・くっきり）</option>
+            <option value="image/webp">WebP（高圧縮）</option>
+          </select>
+        </div>
+
+        <div class="field" id="qualityField">
+          <label>画質：<span id="qualityLabel">80</span>%</label>
+          <div class="quality-row">
+            <input type="range" id="quality" min="10" max="100" value="80">
+          </div>
+        </div>
+
+        <div class="bar">
+          <button class="primary" id="apply">変換する</button>
+          <button class="ghost" id="reset">別の画像にする</button>
+        </div>
+      </div>
+
+      <div class="preview-grid">
+        <div class="pv">
+          <h3>変換前</h3>
+          <img id="beforeImg" alt="変換前">
+          <div class="size" id="beforeSize"></div>
+        </div>
+        <div class="pv">
+          <h3>変換後 <span class="badge" id="reduceBadge" style="display:none;"></span></h3>
+          <img id="afterImg" alt="変換後">
+          <div class="size" id="afterSize"></div>
+        </div>
+      </div>
+
+      <div class="bar">
+        <button class="primary" id="download">ダウンロード</button>
+      </div>
+    </div>
+
+    <footer>Day 10 / 100 — Image Resizer & Compressor</footer>
+  </div>
+
+<script>
+  const drop = document.getElementById('drop');
+  const fileInput = document.getElementById('file');
+  const panel = document.getElementById('panel');
+  const widthEl = document.getElementById('width');
+  const heightEl = document.getElementById('height');
+  const keepRatio = document.getElementById('keepRatio');
+  const formatEl = document.getElementById('format');
+  const qualityEl = document.getElementById('quality');
+  const qualityLabel = document.getElementById('qualityLabel');
+  const qualityField = document.getElementById('qualityField');
+
+  let originalImage = null;   // 読み込んだ元画像
+  let originalBytes = 0;      // 元ファイルのバイト数
+  let outputBlob = null;      // 変換後の画像データ
+
+  // 画像ファイルを読み込んで、元画像として保持する
+  function loadFile(file) {
+    if (!file || !file.type.startsWith('image/')) { alert('画像ファイルを選んでください。'); return; }
+    originalBytes = file.size;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        originalImage = img;
+        // 初期値として元のサイズを入れておく
+        widthEl.value = img.naturalWidth;
+        heightEl.value = img.naturalHeight;
+        document.getElementById('beforeImg').src = reader.result;
+        document.getElementById('beforeSize').textContent = `${img.naturalWidth} × ${img.naturalHeight}px ／ ${formatBytes(originalBytes)}`;
+        panel.classList.add('show');
+        document.getElementById('afterImg').src = '';
+        document.getElementById('afterSize').textContent = '「変換する」を押してください';
+        document.getElementById('reduceBadge').style.display = 'none';
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file); // ローカルで読むだけ（アップロードしない）
+  }
+
+  // バイト数を読みやすい単位（KB/MB）にする
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1024 / 1024).toFixed(2) + ' MB';
+  }
+
+  // 設定（サイズ・形式・画質）が変わったら、前回の変換結果を無効にする
+  // ※ 表示と実際に保存される画像がズレるのを防ぐため
+  function invalidateOutput() {
+    if (!outputBlob) return;
+    outputBlob = null;
+    document.getElementById('afterImg').src = '';
+    document.getElementById('afterSize').textContent = '設定が変わりました。もう一度「変換する」を押してください';
+    document.getElementById('reduceBadge').style.display = 'none';
+  }
+  [widthEl, heightEl, qualityEl].forEach(el => el.addEventListener('input', invalidateOutput));
+  [formatEl, keepRatio].forEach(el => el.addEventListener('change', invalidateOutput));
+
+  // 縦横比を保ったまま、片方の入力にもう片方を合わせる
+  widthEl.addEventListener('input', () => {
+    if (keepRatio.checked && originalImage) {
+      const ratio = originalImage.naturalHeight / originalImage.naturalWidth;
+      heightEl.value = Math.round(widthEl.value * ratio);
+    }
+  });
+  heightEl.addEventListener('input', () => {
+    if (keepRatio.checked && originalImage) {
+      const ratio = originalImage.naturalWidth / originalImage.naturalHeight;
+      widthEl.value = Math.round(heightEl.value * ratio);
+    }
+  });
+
+  // PNGは画質スライダーが効かないので、形式に応じて表示を切り替える
+  formatEl.addEventListener('change', () => {
+    qualityField.style.display = formatEl.value === 'image/png' ? 'none' : 'block';
+  });
+  qualityEl.addEventListener('input', () => qualityLabel.textContent = qualityEl.value);
+
+  // 実際にリサイズ・圧縮する
+  document.getElementById('apply').addEventListener('click', () => {
+    if (!originalImage) return;
+    const w = parseInt(widthEl.value, 10), h = parseInt(heightEl.value, 10);
+    if (!w || !h || w < 1 || h < 1) { alert('幅と高さを正しく入力してください。'); return; }
+
+    // canvasに描き直すことでサイズ変更する
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(originalImage, 0, 0, w, h);
+
+    const format = formatEl.value;
+    const quality = parseInt(qualityEl.value, 10) / 100;
+    // canvasを指定形式の画像データ（Blob）に変換する
+    canvas.toBlob(blob => {
+      if (!blob) { alert('この形式に対応していないブラウザの可能性があります。'); return; }
+      outputBlob = blob;
+      const url = URL.createObjectURL(blob);
+      document.getElementById('afterImg').src = url;
+      document.getElementById('afterSize').textContent = `${w} × ${h}px ／ ${formatBytes(blob.size)}`;
+      // どれだけ軽くなったかを表示
+      const badge = document.getElementById('reduceBadge');
+      const diff = originalBytes - blob.size;
+      if (diff > 0) {
+        badge.textContent = `−${Math.round(diff / originalBytes * 100)}%`;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }, format, format === 'image/png' ? undefined : quality);
+  });
+
+  // 変換後の画像をダウンロードする
+  document.getElementById('download').addEventListener('click', () => {
+    if (!outputBlob) { alert('先に「変換する」を押してください。'); return; }
+    const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[outputBlob.type] || 'img';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(outputBlob);
+    a.download = `resized.${ext}`;
+    a.click();
+  });
+
+  document.getElementById('reset').addEventListener('click', () => {
+    originalImage = null; outputBlob = null;
+    panel.classList.remove('show');
+    fileInput.value = '';
+  });
+
+  // ドラッグ＆ドロップとクリックでの読み込み
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('drag');
+    loadFile(e.dataTransfer.files[0]);
+  });
+</script>
+</body>
+</html>

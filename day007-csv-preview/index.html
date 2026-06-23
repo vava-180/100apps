@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSV→表プレビュー＆印刷</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
+  .file-btn, .ghost, .primary {
+    border: none; border-radius: 10px; padding: 11px 18px; font-size: 0.9rem;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .file-btn { background: var(--accent); color: #fff; }
+  .primary { background: var(--accent); color: #fff; }
+  .ghost { background: #eceef2; color: var(--text); }
+  button:hover, .file-btn:hover { opacity: .92; }
+  input[type="file"] { display: none; }
+  .search { margin-left: auto; }
+  .search input {
+    padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 0.9rem; font-family: inherit; min-width: 200px; outline: none;
+  }
+  .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  label.paste { display: block; font-size: 0.8rem; color: var(--sub); margin: 8px 0 6px; }
+  textarea {
+    width: 100%; min-height: 90px; padding: 12px; border: 1px solid var(--border);
+    border-radius: 10px; font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem;
+    resize: vertical; outline: none;
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .meta { font-size: 0.8rem; color: var(--sub); margin: 14px 0 8px; }
+  .table-area { overflow-x: auto; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+  th, td { border-bottom: 1px solid var(--border); padding: 9px 14px; text-align: left; white-space: nowrap; }
+  th { background: #f3f6ff; position: sticky; top: 0; cursor: pointer; user-select: none; }
+  th:hover { background: #e7eeff; }
+  th .arrow { color: var(--accent); font-size: 0.75rem; margin-left: 4px; }
+  tbody tr:nth-child(even) { background: #fafbfd; }
+  .empty { padding: 40px; text-align: center; color: var(--sub); }
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+
+  /* 印刷時はボタンや入力欄を隠して、表だけきれいに出す */
+  @media print {
+    .bar, .paste, textarea, .lead, footer { display: none !important; }
+    .wrap { max-width: none; padding: 0; }
+    .table-area { border: none; }
+    th { position: static; }
+    th, td { white-space: normal; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>CSV→表プレビュー＆印刷</h1>
+    <p class="lead">CSVファイルを読み込むか貼り付けると、見やすい表で表示。検索・並べ替え・印刷ができます。</p>
+
+    <div class="bar">
+      <label class="file-btn">CSVファイルを選ぶ<input type="file" id="file" accept=".csv,text/csv"></label>
+      <button class="ghost" id="sample">サンプルを表示</button>
+      <button class="primary" id="print">🖨 印刷</button>
+      <div class="search"><input type="text" id="search" placeholder="🔍 表の中を検索…"></div>
+    </div>
+
+    <label class="paste">またはCSVを直接貼り付け</label>
+    <textarea id="paste" placeholder="名前,部署,年齢&#10;山田,営業,30&#10;鈴木,開発,25"></textarea>
+
+    <div class="meta" id="meta"></div>
+    <div class="table-area"><div id="tableHost"><div class="empty">CSVを読み込むと、ここに表が表示されます。</div></div></div>
+
+    <footer>Day 7 / 100 — CSV Preview & Print</footer>
+  </div>
+
+<script>
+  let rows = [];          // 全データ（見出しを含む二次元配列）
+  let sortCol = -1;       // 並べ替え中の列
+  let sortAsc = true;     // 昇順かどうか
+  let csvWarning = '';    // 読み込み時の注意メッセージ（引用符の閉じ忘れなど）
+
+  // CSVテキストを二次元配列に分解する（ダブルクォート対応の簡易パーサ）
+  function parseCsv(text) {
+    const result = [];
+    let row = [], field = '', inQuotes = false;
+    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; } // "" はダブルクォート1個
+          else inQuotes = false;
+        } else field += c;
+      } else {
+        if (c === '"' && field === '') inQuotes = true; // 引用はセルの先頭だけ有効
+        else if (c === ',') { row.push(field); field = ''; }
+        else if (c === '\n') { row.push(field); result.push(row); row = []; field = ''; }
+        else field += c;
+      }
+    }
+    // 最後のフィールド・行を取りこぼさないように追加
+    if (field !== '' || row.length > 0) { row.push(field); result.push(row); }
+    // 引用符（"）が閉じられないまま終わった場合は注意を出す
+    csvWarning = inQuotes ? '引用符（"）が閉じられていません。表示が崩れている可能性があります。' : '';
+    return result.filter(r => r.some(c => c !== ''));
+  }
+
+  // 現在のデータを表（HTML）として描画する
+  function render() {
+    const host = document.getElementById('tableHost');
+    if (rows.length === 0) { host.innerHTML = '<div class="empty">CSVを読み込むと、ここに表が表示されます。</div>'; document.getElementById('meta').textContent = ''; return; }
+
+    const header = rows[0];
+    let body = rows.slice(1);
+
+    // 検索でしぼり込み（どこかの列に含まれていれば残す）
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    if (q) body = body.filter(r => r.some(c => c.toLowerCase().includes(q)));
+
+    // 並べ替え（数値ならば数値として比較）
+    if (sortCol >= 0) {
+      body = body.slice().sort((a, b) => {
+        const x = a[sortCol] ?? '', y = b[sortCol] ?? '';
+        const nx = parseFloat(x), ny = parseFloat(y);
+        let cmp;
+        if (!isNaN(nx) && !isNaN(ny)) cmp = nx - ny;
+        else cmp = x.localeCompare(y, 'ja');
+        return sortAsc ? cmp : -cmp;
+      });
+    }
+
+    let html = '<table><thead><tr>';
+    header.forEach((h, i) => {
+      const arrow = sortCol === i ? `<span class="arrow">${sortAsc ? '▲' : '▼'}</span>` : '';
+      html += `<th data-col="${i}">${escapeHtml(h)}${arrow}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    body.forEach(r => {
+      html += '<tr>' + header.map((_, i) => `<td>${escapeHtml(r[i] ?? '')}</td>`).join('') + '</tr>';
+    });
+    html += '</tbody></table>';
+    host.innerHTML = html;
+
+    document.getElementById('meta').textContent =
+      `${header.length}列 × ${body.length}行${q ? '（検索でしぼり込み中）' : ''}${csvWarning ? ' ／ ⚠ ' + csvWarning : ''}`;
+
+    // 見出しクリックで並べ替え
+    host.querySelectorAll('th').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = parseInt(th.dataset.col, 10);
+        if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; }
+        render();
+      });
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function load(text) { rows = parseCsv(text); sortCol = -1; render(); }
+
+  // ファイル選択で読み込み
+  document.getElementById('file').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => { document.getElementById('paste').value = reader.result; load(reader.result); };
+    reader.readAsText(f, 'UTF-8');
+  });
+
+  document.getElementById('paste').addEventListener('input', e => load(e.target.value));
+  document.getElementById('search').addEventListener('input', render);
+  document.getElementById('print').addEventListener('click', () => window.print());
+
+  document.getElementById('sample').addEventListener('click', () => {
+    const sample = '名前,部署,年齢,入社年\n山田太郎,営業,34,2015\n鈴木花子,開発,28,2020\n佐藤健,人事,41,2008\n田中美咲,開発,25,2022';
+    document.getElementById('paste').value = sample;
+    load(sample);
+  });
+</script>
+</body>
+</html>

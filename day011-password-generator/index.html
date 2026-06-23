@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>パスワード生成ツール</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+
+  /* 生成結果の表示欄 */
+  .result {
+    display: flex; gap: 10px; align-items: stretch; margin-bottom: 8px;
+  }
+  .result .pw {
+    flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; font-family: ui-monospace, Consolas, monospace; font-size: 1.15rem;
+    word-break: break-all; min-height: 56px; display: flex; align-items: center;
+  }
+  .result button {
+    border: none; border-radius: 12px; padding: 0 18px; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .copy { background: var(--accent); color: #fff; }
+  .copy.done { background: #1d8a4f; }
+  .reload { background: #eceef2; color: var(--text); font-size: 1.2rem; }
+  button:hover { opacity: .92; }
+
+  /* 強度メーター */
+  .strength { margin: 4px 0 24px; }
+  .bar { height: 8px; background: #e7e9ee; border-radius: 999px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; width: 0; transition: width .2s, background .2s; }
+  .strength .label { font-size: 0.8rem; color: var(--sub); margin-top: 6px; }
+
+  /* 設定パネル */
+  .controls { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+  .len-row { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .len-row label { font-size: 0.9rem; font-weight: 600; white-space: nowrap; }
+  .len-row input[type="range"] { flex: 1; }
+  .len-num {
+    width: 56px; text-align: center; font-size: 1rem; font-weight: 700; color: var(--accent);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 4px; font-family: inherit;
+  }
+  .opt { display: flex; align-items: center; gap: 9px; padding: 7px 0; font-size: 0.92rem; cursor: pointer; }
+  .opt input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+  .opt .hint { color: var(--sub); font-size: 0.8rem; }
+  .warn { color: #c0392b; font-size: 0.82rem; margin-top: 10px; min-height: 1.2em; }
+
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>パスワード生成ツール</h1>
+    <p class="lead">安全な乱数で、強いパスワードをその場で作ります。入力内容はパソコンの外に送られません（ネット通信なし）。</p>
+
+    <div class="result">
+      <div class="pw" id="pw">ここに生成されます</div>
+      <button class="copy" id="copy">コピー</button>
+      <button class="reload" id="reload" title="作り直す">⟳</button>
+    </div>
+
+    <div class="strength">
+      <div class="bar"><span id="bar"></span></div>
+      <div class="label" id="strengthLabel">―</div>
+    </div>
+
+    <div class="controls">
+      <div class="len-row">
+        <label for="length">長さ</label>
+        <input type="range" id="length" min="4" max="40" value="16">
+        <input type="number" id="lengthNum" class="len-num" min="4" max="40" value="16">
+      </div>
+
+      <label class="opt"><input type="checkbox" id="upper" checked> 大文字（A〜Z）</label>
+      <label class="opt"><input type="checkbox" id="lower" checked> 小文字（a〜z）</label>
+      <label class="opt"><input type="checkbox" id="digit" checked> 数字（0〜9）</label>
+      <label class="opt"><input type="checkbox" id="symbol" checked> 記号（!@#$ など）</label>
+      <label class="opt"><input type="checkbox" id="noSimilar"> 紛らわしい文字を除く <span class="hint">（O 0 o, I l 1 など）</span></label>
+
+      <div class="warn" id="warn"></div>
+    </div>
+
+    <footer>Day 11 / 100 — Password Generator</footer>
+  </div>
+
+<script>
+  // 使う文字の種類ごとの一覧
+  const SETS = {
+    upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    lower: 'abcdefghijklmnopqrstuvwxyz',
+    digit: '0123456789',
+    symbol: '!@#$%^&*()-_=+[]{};:,.?/'
+  };
+  // 「紛らわしい文字」（見間違えやすい文字）
+  const SIMILAR = 'O0oIl1|';
+
+  const el = id => document.getElementById(id);
+  const pwEl = el('pw'), barEl = el('bar'), warnEl = el('warn');
+  const lengthEl = el('length'), lengthNumEl = el('lengthNum');
+
+  // 安全な乱数で、0以上max未満の整数を1つ返す
+  // ※ Math.random() は予測されやすいので、暗号用の crypto を使う
+  // ※ 余り（%）だけだと数字に偏りが出るため、偏る分は捨ててやり直す
+  function randomInt(max) {
+    if (!Number.isInteger(max) || max <= 0 || max > 0x100000000) {
+      throw new RangeError('randomInt: max は 1〜2^32 の整数で指定してください');
+    }
+    const limit = Math.floor(0x100000000 / max) * max; // 256^4 を max で割り切れる範囲
+    const buf = new Uint32Array(1);
+    let n;
+    do {
+      crypto.getRandomValues(buf);
+      n = buf[0];
+    } while (n >= limit);
+    return n % max;
+  }
+
+  // 今チェックされている文字種を集めて、1つの文字プールを作る
+  function buildPool() {
+    const chosen = ['upper', 'lower', 'digit', 'symbol'].filter(k => el(k).checked);
+    const noSimilar = el('noSimilar').checked;
+    // 種類ごとの文字（紛らわしい文字を除く設定なら、ここで取り除く）
+    const groups = chosen.map(k => {
+      let chars = SETS[k];
+      if (noSimilar) chars = [...chars].filter(c => !SIMILAR.includes(c)).join('');
+      return chars;
+    }).filter(g => g.length > 0);
+    return groups;
+  }
+
+  // パスワードを1つ生成する
+  function generate() {
+    const groups = buildPool();
+    const length = parseInt(lengthEl.value, 10);
+
+    if (groups.length === 0) {
+      pwEl.textContent = '―';
+      warnEl.textContent = '文字の種類を1つ以上選んでください。';
+      updateStrength('');
+      return;
+    }
+    warnEl.textContent = '';
+
+    // 全プールからlength文字を引き、「選んだ種類がすべて1文字以上入る」まで作り直す。
+    // こうすると、条件を満たすパスワードの中から公平（一様）に選べる。
+    // ※ 念のため試行回数に上限を設け、万一そろわなくても固まらないようにする
+    const all = groups.join('');
+    let pw = '';
+    for (let attempt = 0; attempt < 1000; attempt++) {
+      const chars = [];
+      for (let i = 0; i < length; i++) chars.push(all[randomInt(all.length)]);
+      pw = chars.join('');
+      // 選んだ種類が全部ふくまれていれば完成
+      if (groups.every(g => [...pw].some(c => g.includes(c)))) break;
+    }
+
+    pwEl.textContent = pw;
+    updateStrength(pw);
+    resetCopyButton();
+  }
+
+  // パスワードの強さをざっくり評価してメーターに反映
+  // 目安: 文字の種類数 × 長さ から「組み合わせの多さ」を概算する
+  function updateStrength(pw) {
+    if (!pw) { barEl.style.width = '0'; el('strengthLabel').textContent = '―'; return; }
+    const poolSize = buildPool().reduce((sum, g) => sum + g.length, 0);
+    // 強さ(bit) ≒ 長さ × log2(使える文字数)。bitが大きいほど破られにくい
+    const bits = pw.length * Math.log2(poolSize || 1);
+
+    let label, color, pct;
+    if (bits < 40)       { label = '弱い';     color = '#e74c3c'; pct = 25; }
+    else if (bits < 60)  { label = 'ふつう';   color = '#e67e22'; pct = 50; }
+    else if (bits < 80)  { label = '強い';     color = '#f1c40f'; pct = 75; }
+    else                 { label = 'とても強い'; color = '#1d8a4f'; pct = 100; }
+
+    barEl.style.width = pct + '%';
+    barEl.style.background = color;
+    el('strengthLabel').textContent = `強度の目安：${label}（約 ${Math.round(bits)} ビット）`;
+  }
+
+  // コピーボタンを元の表示に戻す
+  function resetCopyButton() {
+    const btn = el('copy');
+    btn.textContent = 'コピー';
+    btn.classList.remove('done');
+  }
+
+  // クリップボードにコピー
+  el('copy').addEventListener('click', async () => {
+    const text = pwEl.textContent;
+    if (!text || text === '―' || text === 'ここに生成されます') return;
+    try {
+      await navigator.clipboard.writeText(text);
+      const btn = el('copy');
+      btn.textContent = 'コピー済';
+      btn.classList.add('done');
+    } catch {
+      warnEl.textContent = 'コピーに失敗しました。手動で選択してください。';
+    }
+  });
+
+  // 長さスライダーと数値入力を連動させる
+  lengthEl.addEventListener('input', () => { lengthNumEl.value = lengthEl.value; generate(); });
+  lengthNumEl.addEventListener('input', () => {
+    let v = parseInt(lengthNumEl.value, 10);
+    if (isNaN(v)) return; // 入力途中（空欄など）は何もしない
+    v = Math.max(4, Math.min(40, v)); // 4〜40の範囲に収める
+    lengthEl.value = v;
+    lengthNumEl.value = v; // 丸めた結果を数値欄にも反映（表示と実際の長さを一致させる）
+    generate();
+  });
+
+  // 各設定が変わったら作り直す
+  ['upper', 'lower', 'digit', 'symbol', 'noSimilar'].forEach(id => el(id).addEventListener('change', generate));
+  el('reload').addEventListener('click', generate);
+
+  // 最初に1つ作っておく
+  generate();
+</script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ストップウォッチ＆タイマー</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 540px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab {
+    flex: 1; border: 1px solid var(--border); background: var(--card); color: var(--sub);
+    border-radius: 10px; padding: 10px; font-size: 0.92rem; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 30px 22px; text-align: center; }
+  .display {
+    font-size: 3.2rem; font-weight: 800; font-variant-numeric: tabular-nums;
+    letter-spacing: 1px; margin: 6px 0 4px;
+  }
+  .display.alarm { color: #e74c3c; animation: blink .6s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+  .ms { font-size: 1.4rem; color: var(--sub); font-weight: 700; }
+  .panel { display: none; }
+  .panel.show { display: block; }
+
+  .btns { display: flex; gap: 10px; justify-content: center; margin-top: 22px; }
+  button.act {
+    border: none; border-radius: 10px; padding: 12px 26px; font-size: 0.98rem;
+    font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .start { background: var(--accent); color: #fff; }
+  .stop { background: #e67e22; color: #fff; }
+  .ghost { background: #eceef2; color: var(--text); }
+  button:hover { opacity: .92; }
+  button:disabled { opacity: .45; cursor: default; }
+
+  /* タイマーの入力 */
+  .set { display: flex; gap: 8px; justify-content: center; align-items: center; margin: 10px 0 4px; }
+  .set input {
+    width: 76px; padding: 10px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 1.3rem; text-align: center; font-family: inherit; outline: none;
+  }
+  .set input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .set .colon { font-size: 1.3rem; font-weight: 700; color: var(--sub); }
+  .set span.u { font-size: 0.8rem; color: var(--sub); }
+
+  /* ラップ */
+  .laps { margin-top: 20px; text-align: left; max-height: 220px; overflow-y: auto; }
+  .laps .lap { display: flex; justify-content: space-between; padding: 8px 4px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; font-size: 0.92rem; }
+  .laps .lap .no { color: var(--sub); }
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>ストップウォッチ＆タイマー</h1>
+    <p class="lead">時間の計測（ラップ付き）と、カウントダウンができます。終了時に音で知らせます（ネット通信なし）。</p>
+
+    <div class="tabs">
+      <button class="tab active" data-mode="sw">ストップウォッチ</button>
+      <button class="tab" data-mode="timer">タイマー</button>
+    </div>
+
+    <!-- ストップウォッチ -->
+    <div class="panel show" id="swPanel">
+      <div class="card">
+        <div class="display" id="swDisplay">00:00<span class="ms">.00</span></div>
+        <div class="btns">
+          <button class="act start" id="swStart">スタート</button>
+          <button class="act ghost" id="swLap" disabled>ラップ</button>
+          <button class="act ghost" id="swReset" disabled>リセット</button>
+        </div>
+        <div class="laps" id="laps"></div>
+      </div>
+    </div>
+
+    <!-- タイマー -->
+    <div class="panel" id="timerPanel">
+      <div class="card">
+        <div class="set" id="timerSet">
+          <div><input type="number" id="inMin" min="0" max="999" value="3"><div><span class="u">分</span></div></div>
+          <span class="colon">:</span>
+          <div><input type="number" id="inSec" min="0" max="59" value="0"><div><span class="u">秒</span></div></div>
+        </div>
+        <div class="display" id="timerDisplay" style="display:none;">03:00</div>
+        <div class="btns">
+          <button class="act start" id="timerStart">スタート</button>
+          <button class="act ghost" id="timerReset" disabled>リセット</button>
+        </div>
+        <div id="timerMsg" style="color:#c0392b;font-size:0.82rem;min-height:1.2em;margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <footer>Day 15 / 100 — Stopwatch & Timer</footer>
+  </div>
+
+<script>
+  const el = id => document.getElementById(id);
+
+  // ====== 共通：終了音（ネット通信なしでブラウザが音を作る）======
+  let audioCtx = null;
+  function beep(times = 3) {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      for (let i = 0; i < times; i++) {
+        const t = audioCtx.currentTime + i * 0.35;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = 880;          // 音の高さ（Hz）
+        gain.gain.setValueAtTime(0.001, t);
+        gain.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t); osc.stop(t + 0.27);
+      }
+    } catch { /* 音が出せない環境では何もしない */ }
+  }
+
+  // ミリ秒 → "MM:SS" と ".cc"（1/100秒）に分ける
+  function splitTime(ms) {
+    const totalCs = Math.floor(ms / 10);      // 1/100秒の数
+    const cs = totalCs % 100;
+    const totalSec = Math.floor(totalCs / 100);
+    const sec = totalSec % 60;
+    const min = Math.floor(totalSec / 60);
+    const pad = n => String(n).padStart(2, '0');
+    return { main: `${pad(min)}:${pad(sec)}`, cs: pad(cs) };
+  }
+
+  // ====== ストップウォッチ ======
+  let swStartAt = 0;     // 計測開始の時刻（Date.now基準）
+  let swElapsed = 0;     // 一時停止までに溜まった時間
+  let swTimer = null;
+  let lapCount = 0, lastLap = 0;
+
+  function swNow() { return swElapsed + (swStartAt ? Date.now() - swStartAt : 0); }
+
+  function swRender() {
+    const { main, cs } = splitTime(swNow());
+    el('swDisplay').innerHTML = `${main}<span class="ms">.${cs}</span>`;
+  }
+
+  // ストップウォッチを一時停止する（タブ切替からも呼ぶ）
+  function pauseStopwatch() {
+    if (!swTimer) return;
+    swElapsed = swNow();
+    swStartAt = 0;
+    clearInterval(swTimer); swTimer = null;
+    el('swStart').textContent = '再開';
+    el('swStart').classList.replace('stop', 'start');
+    el('swLap').disabled = true; // 止まっている間はラップを押せないようにする
+  }
+
+  el('swStart').addEventListener('click', () => {
+    if (swTimer) {
+      pauseStopwatch();
+    } else {
+      // 停止中 → 開始/再開
+      swStartAt = Date.now();
+      // 経過時間は「現在時刻との差」で毎回計算するので、setIntervalがズレても誤差が積もらない
+      swTimer = setInterval(swRender, 30);
+      el('swStart').textContent = 'ストップ';
+      el('swStart').classList.replace('start', 'stop');
+      el('swLap').disabled = false;
+      el('swReset').disabled = false;
+    }
+  });
+
+  el('swLap').addEventListener('click', () => {
+    const now = swNow();
+    lapCount++;
+    const lapTime = now - lastLap; // 前のラップからの差
+    lastLap = now;
+    const a = splitTime(lapTime), b = splitTime(now);
+    const div = document.createElement('div');
+    div.className = 'lap';
+    div.innerHTML = `<span class="no">ラップ ${lapCount}</span><span>${a.main}.${a.cs}</span><span style="color:var(--sub)">${b.main}.${b.cs}</span>`;
+    el('laps').prepend(div);
+  });
+
+  el('swReset').addEventListener('click', () => {
+    clearInterval(swTimer); swTimer = null;
+    swStartAt = 0; swElapsed = 0; lapCount = 0; lastLap = 0;
+    el('laps').innerHTML = '';
+    el('swDisplay').innerHTML = `00:00<span class="ms">.00</span>`;
+    el('swStart').textContent = 'スタート';
+    el('swStart').classList.replace('stop', 'start');
+    el('swLap').disabled = true;
+    el('swReset').disabled = true;
+  });
+
+  // ====== タイマー（カウントダウン）======
+  let tEndAt = 0;        // 終了予定の時刻
+  let tRemain = 0;       // 残りミリ秒（一時停止用）
+  let tTimer = null;
+  let tRunning = false;
+
+  function timerRender(ms) {
+    const safe = Math.max(0, ms);
+    const totalSec = Math.ceil(safe / 1000);
+    const min = Math.floor(totalSec / 60), sec = totalSec % 60;
+    const pad = n => String(n).padStart(2, '0');
+    el('timerDisplay').textContent = `${pad(min)}:${pad(sec)}`;
+  }
+
+  function timerTick() {
+    const remain = tEndAt - Date.now();
+    if (remain <= 0) {
+      timerRender(0);
+      clearInterval(tTimer); tTimer = null; tRunning = false;
+      el('timerDisplay').classList.add('alarm');
+      el('timerStart').textContent = 'スタート';
+      el('timerStart').classList.replace('stop', 'start');
+      beep(3);
+      return;
+    }
+    timerRender(remain);
+  }
+
+  function readSetMs() {
+    let m = parseInt(el('inMin').value, 10); if (isNaN(m) || m < 0) m = 0;
+    let s = parseInt(el('inSec').value, 10); if (isNaN(s) || s < 0) s = 0;
+    m = Math.min(m, 999); s = Math.min(s, 59);
+    return (m * 60 + s) * 1000;
+  }
+
+  // タイマーを一時停止する（タブ切替からも呼ぶ）
+  function pauseTimer() {
+    if (!tRunning) return;
+    tRemain = Math.max(0, tEndAt - Date.now());
+    clearInterval(tTimer); tTimer = null; tRunning = false;
+    el('timerStart').textContent = '再開';
+    el('timerStart').classList.replace('stop', 'start');
+  }
+
+  el('timerStart').addEventListener('click', () => {
+    if (tRunning) { pauseTimer(); return; }
+    // 開始/再開：残り時間が無ければ入力値から取る
+    let ms = tRemain > 0 ? tRemain : readSetMs();
+    if (ms <= 0) { el('timerMsg').textContent = '1秒以上の時間を入力してください。'; return; } // 0秒では始めない
+    el('timerMsg').textContent = '';
+    el('timerSet').style.display = 'none';
+    el('timerDisplay').style.display = 'block';
+    el('timerDisplay').classList.remove('alarm');
+    tEndAt = Date.now() + ms;
+    timerRender(ms);
+    tTimer = setInterval(timerTick, 100);
+    tRunning = true;
+    tRemain = 0;
+    el('timerStart').textContent = 'ストップ';
+    el('timerStart').classList.replace('start', 'stop');
+    el('timerReset').disabled = false;
+  });
+
+  el('timerReset').addEventListener('click', () => {
+    clearInterval(tTimer); tTimer = null; tRunning = false; tRemain = 0;
+    el('timerDisplay').classList.remove('alarm');
+    el('timerDisplay').style.display = 'none';
+    el('timerSet').style.display = 'flex';
+    el('timerStart').textContent = 'スタート';
+    el('timerStart').classList.replace('stop', 'start');
+    el('timerReset').disabled = true;
+    el('timerMsg').textContent = '';
+  });
+
+  // ====== タブ切り替え ======
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      // 別のタブに移るとき、動作中のものは一時停止する（裏で動き続けて音が鳴らないように）
+      pauseStopwatch();
+      pauseTimer();
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+      const mode = tab.dataset.mode;
+      el('swPanel').classList.toggle('show', mode === 'sw');
+      el('timerPanel').classList.toggle('show', mode === 'timer');
+    });
+  });
+</script>
+</body>
+</html>

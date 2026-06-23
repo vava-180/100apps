@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポモドーロタイマー</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+    --work: #4f7cff;
+    --break: #1d8a4f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    transition: background .4s;
+  }
+  body.is-break { background: #eef7f0; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; text-align: center; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; text-align: center; }
+
+  .phase {
+    text-align: center; font-size: 1rem; font-weight: 700; margin-bottom: 10px;
+    color: var(--work);
+  }
+  body.is-break .phase { color: var(--break); }
+
+  /* 円形のタイマー */
+  .ring-box { position: relative; width: 260px; height: 260px; margin: 0 auto 24px; }
+  svg { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--border); stroke-width: 14; }
+  .ring-fg { fill: none; stroke: var(--work); stroke-width: 14; stroke-linecap: round; transition: stroke-dashoffset .3s linear; }
+  body.is-break .ring-fg { stroke: var(--break); }
+  .time {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .time .num { font-size: 3.2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .time .cyc { font-size: 0.82rem; color: var(--sub); }
+
+  .btns { display: flex; gap: 10px; justify-content: center; margin-bottom: 26px; }
+  button.act {
+    border: none; border-radius: 11px; padding: 13px 30px; font-size: 1rem; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  .start { background: var(--accent); color: #fff; }
+  .stop { background: #e67e22; color: #fff; }
+  .ghost { background: #eceef2; color: var(--text); }
+  button:hover { opacity: .92; }
+
+  .settings { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+  .settings h2 { font-size: 0.85rem; color: var(--sub); margin: 0 0 12px; font-weight: 600; }
+  .srow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .srow:last-child { margin-bottom: 0; }
+  .srow label { font-size: 0.9rem; }
+  .srow input {
+    width: 80px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 0.95rem; text-align: center; font-family: inherit; outline: none;
+  }
+  .srow input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>ポモドーロタイマー</h1>
+    <p class="lead">25分の作業と5分の休憩をくり返して、集中をつくる時間術です（ネット通信なし）。</p>
+
+    <div class="phase" id="phase">作業</div>
+
+    <div class="ring-box">
+      <svg width="260" height="260">
+        <circle class="ring-bg" cx="130" cy="130" r="116"></circle>
+        <circle class="ring-fg" id="ring" cx="130" cy="130" r="116"></circle>
+      </svg>
+      <div class="time">
+        <div class="num" id="num">25:00</div>
+        <div class="cyc" id="cyc">これまで 0 回完了</div>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button class="act start" id="startBtn">スタート</button>
+      <button class="act ghost" id="resetBtn">リセット</button>
+    </div>
+
+    <div class="settings">
+      <h2>設定（分）</h2>
+      <div class="srow"><label>作業の長さ</label><input type="number" id="workMin" min="1" max="120" value="25"></div>
+      <div class="srow"><label>休憩の長さ</label><input type="number" id="breakMin" min="1" max="60" value="5"></div>
+    </div>
+
+    <footer>Day 19 / 100 — Pomodoro Timer</footer>
+  </div>
+
+<script>
+  const el = id => document.getElementById(id);
+
+  // 円周の長さ（半径116）。バーの進み具合の計算に使う
+  const R = 116, CIRC = 2 * Math.PI * R;
+  el('ring').style.strokeDasharray = CIRC;
+
+  // ---- 終了音（Web Audioでブラウザ内で鳴らす・ネット通信なし）----
+  let audioCtx = null;
+  function beep(times = 2) {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      for (let i = 0; i < times; i++) {
+        const t = audioCtx.currentTime + i * 0.3;
+        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.001, t);
+        gain.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t); osc.stop(t + 0.24);
+        osc.onended = () => { osc.disconnect(); gain.disconnect(); }; // 鳴り終わったら後始末
+      }
+    } catch { /* 鳴らせない環境では何もしない */ }
+  }
+
+  // ---- 状態 ----
+  let phase = 'work';   // work / break
+  let running = false;
+  let endAt = 0;        // 終了予定の時刻
+  let remain = 0;       // 残りミリ秒（一時停止用）
+  let timer = null;
+  let completed = 0;    // 完了した作業の回数
+
+  function workMs() { return clampMin(el('workMin').value, 1, 120) * 60000; }
+  function breakMs() { return clampMin(el('breakMin').value, 1, 60) * 60000; }
+  function clampMin(v, lo, hi) { let n = parseInt(v, 10); if (isNaN(n)) n = lo; return Math.max(lo, Math.min(hi, n)); }
+
+  function phaseTotal() { return phase === 'work' ? workMs() : breakMs(); }
+
+  // 残り時間を画面に反映する
+  function paint(ms) {
+    const safe = Math.max(0, ms);
+    const totalSec = Math.ceil(safe / 1000);
+    const m = Math.floor(totalSec / 60), s = totalSec % 60;
+    const pad = n => String(n).padStart(2, '0');
+    el('num').textContent = `${pad(m)}:${pad(s)}`;
+
+    // 円グラフ（残りの割合だけ線を引く）
+    const ratio = phaseTotal() ? safe / phaseTotal() : 0;
+    el('ring').style.strokeDashoffset = CIRC * (1 - ratio);
+  }
+
+  function setPhase(p) {
+    phase = p;
+    el('phase').textContent = p === 'work' ? '作業' : '休憩';
+    document.body.classList.toggle('is-break', p === 'break');
+  }
+
+  // 1フレームごとの処理（残り時間を計算して、0になったら次のフェーズへ）
+  function tick() {
+    let left = endAt - Date.now();
+    if (left > 0) { paint(left); return; }
+
+    // 時間が来た。スリープやタブ切替で複数フェーズぶん過ぎている場合もまとめて消化する。
+    // 終了予定（endAt）に各フェーズの長さを足していくので、ズレが積み重ならない。
+    let switched = false;
+    let guard = 0;
+    while (left <= 0 && guard < 10000) {
+      if (phase === 'work') { completed++; setPhase('break'); }
+      else { setPhase('work'); }
+      endAt += phaseTotal();
+      left = endAt - Date.now();
+      switched = true;
+      guard++;
+    }
+    el('cyc').textContent = `これまで ${completed} 回完了`;
+    if (switched) beep(2); // 復帰時はまとめて1回だけ鳴らす
+    paint(left);
+  }
+
+  function start() {
+    // 始める前に設定値を範囲内へ直して欄にも反映（25abc や 0 などを防ぐ）
+    normalizeField(el('workMin'), 1, 120);
+    normalizeField(el('breakMin'), 1, 60);
+    const ms = remain > 0 ? remain : phaseTotal();
+    endAt = Date.now() + ms;
+    timer = setInterval(tick, 200);
+    running = true; remain = 0;
+    el('startBtn').textContent = '一時停止';
+    el('startBtn').classList.replace('start', 'stop');
+    lockSettings(true);
+  }
+
+  function pause() {
+    remain = Math.max(0, endAt - Date.now());
+    clearInterval(timer); timer = null; running = false;
+    el('startBtn').textContent = '再開';
+    el('startBtn').classList.replace('stop', 'start');
+  }
+
+  function reset() {
+    clearInterval(timer); timer = null; running = false; remain = 0;
+    setPhase('work');
+    completed = 0;
+    el('cyc').textContent = 'これまで 0 回完了';
+    paint(workMs());
+    el('startBtn').textContent = 'スタート';
+    el('startBtn').classList.replace('stop', 'start');
+    lockSettings(false);
+  }
+
+  // 動作中は設定（分）を触れないようにする（途中で変わると混乱するため）
+  function lockSettings(lock) {
+    el('workMin').disabled = lock;
+    el('breakMin').disabled = lock;
+  }
+
+  // 入力欄の値を範囲内の整数に直して、欄にも書き戻す（表示と実際の時間を一致させる）
+  function normalizeField(elm, lo, hi) {
+    let n = Math.floor(Number(elm.value));
+    if (!Number.isFinite(n)) n = lo;
+    n = Math.max(lo, Math.min(hi, n));
+    elm.value = n;
+    return n;
+  }
+
+  el('startBtn').addEventListener('click', () => { running ? pause() : start(); });
+  el('resetBtn').addEventListener('click', reset);
+
+  // 入力中は表示だけ更新し、確定（change）したときに範囲内へ直して欄に書き戻す
+  el('workMin').addEventListener('input', () => { if (!running && phase === 'work') paint(workMs()); });
+  el('breakMin').addEventListener('input', () => { if (!running && phase === 'break') paint(breakMs()); });
+  el('workMin').addEventListener('change', () => { normalizeField(el('workMin'), 1, 120); if (!running && phase === 'work') paint(workMs()); });
+  el('breakMin').addEventListener('change', () => { normalizeField(el('breakMin'), 1, 60); if (!running && phase === 'break') paint(breakMs()); });
+
+  // 最初の表示
+  paint(workMs());
+</script>
+</body>
+</html>

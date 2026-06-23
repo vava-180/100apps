@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文字数カウンター</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px 60px;
+  }
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  .lead {
+    color: var(--sub);
+    font-size: 0.9rem;
+    margin: 0 0 24px;
+  }
+  .lead code {
+    background: #eceef2;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+  }
+  textarea {
+    width: 100%;
+    min-height: 240px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text);
+    resize: vertical;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,124,255,.15);
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .stat .label {
+    font-size: 0.8rem;
+    color: var(--sub);
+    margin-bottom: 6px;
+  }
+  .stat .value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .value .unit {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--sub);
+    margin-left: 4px;
+  }
+  footer {
+    margin-top: 28px;
+    text-align: center;
+    color: var(--sub);
+    font-size: 0.8rem;
+  }
+  @media (max-width: 480px) {
+    .stats { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>文字数カウンター</h1>
+    <p class="lead">
+      入力するとリアルタイムで集計します。<code>-テキスト-</code> で囲んだ部分は引用としてカウントから除外されます。
+    </p>
+
+    <textarea id="input" placeholder="ここにテキストを入力してください…"></textarea>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="label">文字数</div>
+        <div class="value"><span id="chars">0</span><span class="unit">字</span></div>
+      </div>
+      <div class="stat">
+        <div class="label">空白を除いた文字数</div>
+        <div class="value"><span id="charsNoSpace">0</span><span class="unit">字</span></div>
+      </div>
+      <div class="stat">
+        <div class="label">行数</div>
+        <div class="value"><span id="lines">0</span><span class="unit">行</span></div>
+      </div>
+      <div class="stat">
+        <div class="label">原稿用紙換算</div>
+        <div class="value"><span id="manuscript">0</span><span class="unit">枚 (400字)</span></div>
+      </div>
+    </div>
+
+    <footer>Day 1 / 100 — Character Counter</footer>
+  </div>
+
+<script>
+  const input = document.getElementById('input');
+  const elChars = document.getElementById('chars');
+  const elCharsNoSpace = document.getElementById('charsNoSpace');
+  const elLines = document.getElementById('lines');
+  const elManuscript = document.getElementById('manuscript');
+
+  // -テキスト- で囲まれた引用部分を除去する
+  // 半角ハイフン(-)・全角ダッシュ(－)・長音符(ー)を区切りとして許容
+  function stripQuotes(text) {
+    return text.replace(/[-－ー][^-－ー\n]*[-－ー]/g, '');
+  }
+
+  function update() {
+    const raw = input.value;
+
+    // 行数は引用を含む入力全体で数える（空入力時は0）
+    const lines = raw.length === 0 ? 0 : raw.split('\n').length;
+
+    // 引用を除いたテキストで文字数を集計
+    const counted = stripQuotes(raw);
+    const chars = [...counted].length;
+    const charsNoSpace = [...counted.replace(/\s/g, '')].length;
+    const manuscript = (chars / 400).toFixed(1);
+
+    elChars.textContent = chars.toLocaleString();
+    elCharsNoSpace.textContent = charsNoSpace.toLocaleString();
+    elLines.textContent = lines.toLocaleString();
+    elManuscript.textContent = manuscript;
+  }
+
+  input.addEventListener('input', update);
+  update();
+</script>
+</body>
+</html>

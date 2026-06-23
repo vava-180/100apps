@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markdownプレビュー</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 20px; }
+  .bar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .bar button {
+    border: none; border-radius: 9px; padding: 9px 16px; font-size: 0.85rem;
+    font-weight: 600; cursor: pointer; font-family: inherit; background: #eceef2; color: var(--text);
+  }
+  .bar button.primary { background: var(--accent); color: #fff; }
+  .bar button:hover { opacity: .92; }
+  .bar button.done { background: #1d8a4f; color: #fff; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .col h2 { font-size: 0.82rem; color: var(--sub); margin: 0 0 8px; font-weight: 600; }
+  textarea {
+    width: 100%; height: 60vh; padding: 16px; border: 1px solid var(--border); border-radius: 12px;
+    font-family: ui-monospace, Consolas, monospace; font-size: 0.9rem; line-height: 1.7;
+    resize: vertical; outline: none; background: var(--card);
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .preview {
+    height: 60vh; overflow-y: auto; padding: 18px 22px; border: 1px solid var(--border);
+    border-radius: 12px; background: var(--card);
+  }
+  /* プレビュー内の見た目 */
+  .preview h1 { font-size: 1.6rem; border-bottom: 2px solid var(--border); padding-bottom: 6px; margin: .6em 0 .4em; }
+  .preview h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin: .6em 0 .4em; }
+  .preview h3 { font-size: 1.1rem; margin: .6em 0 .3em; }
+  .preview p { margin: .5em 0; }
+  .preview code {
+    background: #f0f2f5; padding: 2px 6px; border-radius: 5px;
+    font-family: ui-monospace, Consolas, monospace; font-size: 0.88em;
+  }
+  .preview pre {
+    background: #2c3038; color: #f5f6f8; padding: 14px 16px; border-radius: 10px; overflow-x: auto;
+  }
+  .preview pre code { background: none; padding: 0; color: inherit; }
+  .preview blockquote {
+    border-left: 4px solid var(--accent); margin: .6em 0; padding: 2px 14px; color: var(--sub); background: #f7f9ff;
+  }
+  .preview a { color: var(--accent); }
+  .preview ul, .preview ol { padding-left: 1.5em; margin: .5em 0; }
+  .preview hr { border: none; border-top: 1px solid var(--border); margin: 1em 0; }
+  .preview table { border-collapse: collapse; margin: .6em 0; }
+  .preview th, .preview td { border: 1px solid var(--border); padding: 6px 12px; }
+  .preview th { background: #f3f6ff; }
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } textarea, .preview { height: 44vh; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Markdownプレビュー</h1>
+    <p class="lead">左にMarkdownを書くと、右にリアルタイムで表示されます。HTMLとしてコピーもできます（ネット通信なし）。</p>
+
+    <div class="bar">
+      <button class="primary" id="copyHtml">HTMLをコピー</button>
+      <button id="sample">サンプルを入れる</button>
+      <button id="clear">クリア</button>
+    </div>
+
+    <div class="grid">
+      <div class="col">
+        <h2>Markdown（入力）</h2>
+        <textarea id="src" spellcheck="false"></textarea>
+      </div>
+      <div class="col">
+        <h2>プレビュー</h2>
+        <div class="preview" id="preview"></div>
+      </div>
+    </div>
+
+    <footer>Day 16 / 100 — Markdown Preview</footer>
+  </div>
+
+<script>
+  const el = id => document.getElementById(id);
+
+  // HTMLとして危ない文字を、ただの文字に置き換える（タグとして解釈させない）
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  // 属性(href)に入れる用：ダブルクォートも無害化する（<>&は呼び出し前に処理済み）
+  function escapeAttr(s) { return String(s).replace(/"/g, '&quot;'); }
+
+  // 行の中の装飾（**太字** *斜体* `コード` [リンク](url)）を変換する
+  // ※ 先にHTMLエスケープ済みの文字列を受け取る前提
+  function inline(text) {
+    // インラインコードは中身を装飾しないので、先に取り出して退避する。
+    // 目印は本文に出てこない形（@@CODE0@@ など）にして、ふつうの数字と取り違えないようにする。
+    const codes = [];
+    text = text.replace(/`([^`]+)`/g, (_, c) => {
+      codes.push(c);
+      return `@@CODE${codes.length - 1}@@`;
+    });
+
+    text = text
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')   // **太字**
+      .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')   // *斜体*
+      .replace(/~~([^~]+)~~/g, '<del>$1</del>')             // ~~取り消し~~
+      // [文字](リンク先) ※ http(s) と # で始まるものだけ許可（安全のため）。href にはURL側を入れる
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)"']+|#[^\s)"']*)\)/g,
+        (_, label, url) => `<a href="${escapeAttr(url)}" target="_blank" rel="noopener">${label}</a>`);
+
+    // 退避したコードを元に戻す
+    text = text.replace(/@@CODE(\d+)@@/g, (_, i) => `<code>${codes[+i]}</code>`);
+    return text;
+  }
+
+  // Markdown全体をHTMLに変換する（行ごとに見ていく）
+  function mdToHtml(md) {
+    const lines = escapeHtml(md).replace(/\r\n/g, '\n').split('\n');
+    let html = '';
+    let i = 0;
+
+    // リスト項目をまとめて<ul>/<ol>にする
+    function flushList(items, ordered) {
+      const tag = ordered ? 'ol' : 'ul';
+      return `<${tag}>` + items.map(it => `<li>${inline(it)}</li>`).join('') + `</${tag}>`;
+    }
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // コードブロック ```
+      if (/^```/.test(line)) {
+        const buf = [];
+        i++;
+        while (i < lines.length && !/^```/.test(lines[i])) { buf.push(lines[i]); i++; }
+        i++; // 閉じる ``` を飛ばす
+        html += `<pre><code>${buf.join('\n')}</code></pre>`;
+        continue;
+      }
+
+      // 見出し # ～ ######
+      const h = /^(#{1,6})\s+(.*)$/.exec(line);
+      if (h) { const lv = h[1].length; html += `<h${lv}>${inline(h[2])}</h${lv}>`; i++; continue; }
+
+      // 水平線 ---
+      if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { html += '<hr>'; i++; continue; }
+
+      // 引用 >
+      if (/^>\s?/.test(line)) {
+        const buf = [];
+        while (i < lines.length && /^>\s?/.test(lines[i])) { buf.push(lines[i].replace(/^>\s?/, '')); i++; }
+        html += `<blockquote>${inline(buf.join(' '))}</blockquote>`;
+        continue;
+      }
+
+      // 表（| a | b | の行で、次の行が区切り --- なら表とみなす）
+      if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1]) && lines[i + 1].includes('-')) {
+        const splitRow = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+        const head = splitRow(line);
+        i += 2; // 見出し行と区切り行
+        let t = '<table><thead><tr>' + head.map(c => `<th>${inline(c)}</th>`).join('') + '</tr></thead><tbody>';
+        while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) {
+          const cells = splitRow(lines[i]);
+          t += '<tr>' + head.map((_, c) => `<td>${inline(cells[c] || '')}</td>`).join('') + '</tr>';
+          i++;
+        }
+        html += t + '</tbody></table>';
+        continue;
+      }
+
+      // 箇条書き - * +
+      if (/^\s*[-*+]\s+/.test(line)) {
+        const items = [];
+        while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) { items.push(lines[i].replace(/^\s*[-*+]\s+/, '')); i++; }
+        html += flushList(items, false);
+        continue;
+      }
+
+      // 番号付き 1. 2.
+      if (/^\s*\d+\.\s+/.test(line)) {
+        const items = [];
+        while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) { items.push(lines[i].replace(/^\s*\d+\.\s+/, '')); i++; }
+        html += flushList(items, true);
+        continue;
+      }
+
+      // 空行はスキップ
+      if (line.trim() === '') { i++; continue; }
+
+      // それ以外は段落。続く非空行はまとめて1段落にする
+      const buf = [line];
+      i++;
+      while (i < lines.length && lines[i].trim() !== '' &&
+             !/^(#{1,6}\s|>|\s*[-*+]\s|\s*\d+\.\s|```|\s*\|)/.test(lines[i]) &&
+             !/^\s*(-{3,}|\*{3,})\s*$/.test(lines[i])) {
+        buf.push(lines[i]); i++;
+      }
+      html += `<p>${inline(buf.join('<br>'))}</p>`;
+    }
+    return html;
+  }
+
+  const SAMPLE = `# Markdownプレビュー
+
+これは **太字** と *斜体*、そして \`コード\` の例です。
+
+## 箇条書き
+- りんご
+- みかん
+- ぶどう
+
+## 番号付き
+1. 準備する
+2. 実行する
+3. 確認する
+
+## 引用とリンク
+> 小さく作って、毎日続ける。
+
+詳しくは [リンク](https://example.com) を参照。
+
+## 表
+| 項目 | 値 |
+| --- | --- |
+| 名前 | 太郎 |
+| 年齢 | 30 |
+
+## コードブロック
+\`\`\`
+function hello() {
+  console.log("Hello");
+}
+\`\`\`
+
+---
+おしまい。`;
+
+  function render() { el('preview').innerHTML = mdToHtml(el('src').value); }
+
+  el('src').addEventListener('input', render);
+  el('sample').addEventListener('click', () => { el('src').value = SAMPLE; render(); });
+  el('clear').addEventListener('click', () => { el('src').value = ''; render(); });
+
+  el('copyHtml').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(el('preview').innerHTML);
+      const b = el('copyHtml'); b.textContent = 'コピーしました'; b.classList.add('done');
+      setTimeout(() => { b.textContent = 'HTMLをコピー'; b.classList.remove('done'); }, 1300);
+    } catch { /* コピー不可の環境では何もしない */ }
+  });
+
+  // 最初にサンプルを表示しておく
+  el('src').value = SAMPLE;
+  render();
+</script>
+</body>
+</html>

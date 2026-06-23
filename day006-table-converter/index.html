@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>表→Markdown / HTML変換</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+  label { display: block; font-size: 0.8rem; color: var(--sub); margin-bottom: 6px; }
+  textarea {
+    width: 100%; min-height: 150px; padding: 14px; border: 1px solid var(--border);
+    border-radius: 12px; background: var(--card); font-size: 0.9rem; line-height: 1.7;
+    color: var(--text); resize: vertical; outline: none; font-family: ui-monospace, Consolas, monospace;
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .opts { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin: 16px 0; font-size: 0.85rem; color: var(--sub); }
+  .opts label { display: inline-flex; align-items: center; gap: 6px; margin: 0; cursor: pointer; }
+  select { padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 0.85rem; }
+  .tabs { display: flex; gap: 8px; margin: 22px 0 12px; }
+  .tabs button {
+    border: 1px solid var(--border); background: var(--card); color: var(--sub);
+    border-radius: 999px; padding: 7px 18px; font-size: 0.85rem; cursor: pointer; font-family: inherit;
+  }
+  .tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .out-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .copy { border: none; background: #eceef2; color: var(--text); border-radius: 8px; padding: 7px 14px; font-size: 0.8rem; cursor: pointer; font-family: inherit; }
+  pre.out {
+    margin: 0; padding: 16px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; white-space: pre-wrap; word-break: break-word;
+    font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; line-height: 1.65; min-height: 120px;
+  }
+  .preview { margin-top: 18px; overflow-x: auto; }
+  .preview table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  .preview th, .preview td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+  .preview th { background: #f3f6ff; }
+  footer { margin-top: 28px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>表→Markdown / HTML変換</h1>
+    <p class="lead">Excelやスプレッドシートからコピーした表を貼り付けると、Markdown表やHTML表に変換します。</p>
+
+    <label>表データを貼り付け（タブ区切り／カンマ区切り）</label>
+    <textarea id="input" placeholder="名前&#9;年齢&#10;山田&#9;30&#10;鈴木&#9;25"></textarea>
+
+    <div class="opts">
+      <span>区切り：</span>
+      <select id="delim">
+        <option value="auto">自動判定</option>
+        <option value="\t">タブ</option>
+        <option value=",">カンマ</option>
+      </select>
+      <label><input type="checkbox" id="hasHeader" checked> 1行目を見出しにする</label>
+    </div>
+
+    <div class="tabs">
+      <button data-fmt="md" class="active">Markdown</button>
+      <button data-fmt="html">HTML</button>
+    </div>
+
+    <div class="out-head">
+      <label style="margin:0;">変換結果</label>
+      <button class="copy" id="copy">コピー</button>
+    </div>
+    <pre class="out" id="output"></pre>
+
+    <div class="preview" id="preview"></div>
+
+    <footer>Day 6 / 100 — Table to Markdown / HTML</footer>
+  </div>
+
+<script>
+  const input = document.getElementById('input');
+  const output = document.getElementById('output');
+  const preview = document.getElementById('preview');
+  const delimSel = document.getElementById('delim');
+  const hasHeader = document.getElementById('hasHeader');
+  let format = 'md';
+
+  // 貼り付けたテキストを「行 × 列」の二次元配列に分解する
+  function parse(text) {
+    const rows = text.replace(/\r/g, '').split('\n').filter(l => l.length > 0);
+    if (rows.length === 0) return [];
+    let delim = delimSel.value;
+    if (delim === 'auto') {
+      // タブが含まれていればタブ、なければカンマと判断する
+      delim = rows[0].includes('\t') ? '\t' : ',';
+    } else if (delim === '\\t') {
+      delim = '\t';
+    }
+    return rows.map(r => splitLine(r, delim));
+  }
+
+  // 1行を区切り文字で分解する（"…" で囲まれた中の区切り文字は無視する）
+  function splitLine(line, delim) {
+    const out = [];
+    let field = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (line[i + 1] === '"') { field += '"'; i++; } // "" はダブルクォート1個
+          else inQuotes = false;
+        } else field += c;
+      } else {
+        if (c === '"' && field === '') inQuotes = true; // 引用はセルの先頭だけ有効
+        else if (c === delim) { out.push(field); field = ''; }
+        else field += c;
+      }
+    }
+    out.push(field);
+    return out.map(c => c.trim());
+  }
+
+  // HTMLの特殊文字（< > &）を安全な表記に置き換える
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // 二次元配列をMarkdownの表に変換する
+  function toMarkdown(data) {
+    if (data.length === 0) return '';
+    const cols = Math.max(...data.map(r => r.length));
+    const pad = r => { const a = r.slice(); while (a.length < cols) a.push(''); return a; };
+    const head = hasHeader.checked ? pad(data[0]) : Array(cols).fill('');
+    const bodyStart = hasHeader.checked ? 1 : 0;
+    let md = '| ' + head.map(c => c.replace(/\|/g, '\\|')).join(' | ') + ' |\n';
+    md += '| ' + Array(cols).fill('---').join(' | ') + ' |\n';
+    for (let i = bodyStart; i < data.length; i++) {
+      md += '| ' + pad(data[i]).map(c => c.replace(/\|/g, '\\|')).join(' | ') + ' |\n';
+    }
+    return md.trimEnd();
+  }
+
+  // 二次元配列をHTMLの表に変換する
+  function toHtmlTable(data) {
+    if (data.length === 0) return '';
+    let html = '<table>\n';
+    const bodyStart = hasHeader.checked ? 1 : 0;
+    if (hasHeader.checked) {
+      html += '  <thead>\n    <tr>' + data[0].map(c => `<th>${escapeHtml(c)}</th>`).join('') + '</tr>\n  </thead>\n';
+    }
+    html += '  <tbody>\n';
+    for (let i = bodyStart; i < data.length; i++) {
+      html += '    <tr>' + data[i].map(c => `<td>${escapeHtml(c)}</td>`).join('') + '</tr>\n';
+    }
+    html += '  </tbody>\n</table>';
+    return html;
+  }
+
+  function render() {
+    const data = parse(input.value);
+    output.textContent = format === 'md' ? toMarkdown(data) : toHtmlTable(data);
+    // プレビューは常にHTMLの表で見せる
+    preview.innerHTML = data.length ? toHtmlTable(data) : '';
+  }
+
+  input.addEventListener('input', render);
+  delimSel.addEventListener('change', render);
+  hasHeader.addEventListener('change', render);
+
+  document.querySelectorAll('.tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      format = btn.dataset.fmt;
+      render();
+    });
+  });
+
+  document.getElementById('copy').addEventListener('click', async () => {
+    if (!output.textContent) return;
+    await navigator.clipboard.writeText(output.textContent);
+    const btn = document.getElementById('copy');
+    btn.textContent = 'コピーしました';
+    setTimeout(() => btn.textContent = 'コピー', 1200);
+  });
+</script>
+</body>
+</html>
