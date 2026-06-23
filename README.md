@@ -63,8 +63,9 @@ IT初心者が、100日間で100個のアプリを作る記録です。
 | 030 | CSV集計・ピボット | ✅ | [aggregate.py](day030-csv-aggregate/aggregate.py) |
 | 031 | CSV 列の抽出・絞り込み | ✅ | [filter_csv.py](day031-csv-filter/filter_csv.py) |
 | 032 | フォルダ容量レポート | ✅ | [folder_size.py](day032-folder-size/folder_size.py) |
+| 033 | フォルダ台帳CSV出力 | ✅ | [ledger.py](day033-folder-ledger/ledger.py) |
 
-Day 033 以降も順次追加予定。
+Day 034 以降も順次追加予定。
 
 ### フェーズ3：VBA / Office自動化（Day 41–65）
 Excel→PowerPoint自動貼り付け、Outlook一括下書き、書類の差し込み量産 など
