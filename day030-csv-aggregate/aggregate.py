@@ -18,6 +18,8 @@ CSV集計・ピボットツール（Day 030）
 """
 
 import csv
+import io
+import math
 import sys
 from pathlib import Path
 
@@ -64,10 +66,14 @@ def to_number(text: str):
         if any((not g.isdigit() or len(g) != 3) for g in groups[1:]):
             return None
         s = sign + intpart.replace(",", "") + dot + frac
+    # 数字・小数点・符号 以外が混じる入力（'1e3' 'inf' 'nan' など）は数値扱いしない
+    if any(ch not in "0123456789.+-" for ch in s):
+        return None
     try:
-        return float(s)
+        value = float(s)
     except ValueError:
         return None
+    return value if math.isfinite(value) else None  # 桁あふれの inf も除く
 
 
 def cell_value(row: list, index: int) -> str:
@@ -210,10 +216,11 @@ def read_csv_rows(path: Path):
     if text is None:
         return None, None, None, "文字コードを判別できません（UTF-8 / Shift_JIS のどちらでもありません）。"
     try:
-        # 改行を保った行ごとに渡すため splitlines を使う
-        all_rows = list(csv.reader(text.splitlines()))
+        # StringIO(newline="") に渡すと、セル内の改行（"..\n.." のような正当な値）も保てる。
+        # strict=True で、引用符の数が合わないなど壊れたCSVをエラーにできる。
+        all_rows = list(csv.reader(io.StringIO(text, newline=""), strict=True))
     except csv.Error as e:
-        return None, None, used_enc, f"CSVの形式が壊れている可能性があります: {e}"
+        return None, None, used_enc, f"CSVの形式が壊れている可能性があります（引用符の対応など）: {e}"
     if not all_rows:
         return None, None, used_enc, "中身が空です。"
     header = all_rows[0]

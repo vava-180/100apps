@@ -61,8 +61,9 @@ IT初心者が、100日間で100個のアプリを作る記録です。
 | 028 | フォルダ内 横断検索 | ✅ | [search.py](day028-folder-search/search.py) |
 | 029 | 文字コード一括変換 | ✅ | [convert_encoding.py](day029-encoding-convert/convert_encoding.py) |
 | 030 | CSV集計・ピボット | ✅ | [aggregate.py](day030-csv-aggregate/aggregate.py) |
+| 031 | CSV 列の抽出・絞り込み | ✅ | [filter_csv.py](day031-csv-filter/filter_csv.py) |
 
-Day 031 以降も順次追加予定。
+Day 032 以降も順次追加予定。
 
 ### フェーズ3：VBA / Office自動化（Day 41–65）
 Excel→PowerPoint自動貼り付け、Outlook一括下書き、書類の差し込み量産 など
