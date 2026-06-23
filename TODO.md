@@ -73,7 +73,7 @@
 - [x] Day 043 重複行のハイライト／削除（Excel）
 - [x] Day 044 セル文字の一括整形：トリム・全角半角（Excel）
 - [x] Day 045 ふりがな自動付与（Excel）
-- [ ] Day 046 住所分割：都道府県／市区町村（Excel）
+- [x] Day 046 住所分割：都道府県／市区町村（Excel）
 - [ ] Day 047 勤怠集計マクロ（Excel）
 - [ ] Day 048 請求書テンプレ一括出力（Excel）
 - [ ] Day 049 グラフ一括作成（Excel）
@@ -89,7 +89,7 @@
 - [ ] Day 057 PowerPoint 目次スライド自動生成（PPT）
 - [ ] Day 058 全スライドのフォント統一（PPT）
 - [ ] Day 059 画像を一括でスライド化（PPT）
-- [ ] Day 060 スライドの文字を一括差し替え（PPT）
+- [x] Day 060 スライドの文字を一括差し替え（PPT）
 - [ ] Day 061 PPTファイルのMarkdown化：スライド内容をMarkdownに書き出し（PPT）
 
 ### Outlook（Day 62–65）
