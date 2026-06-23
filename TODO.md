@@ -135,7 +135,7 @@
 
 - [x] Day 091 数当てゲーム（number-guessing）
 - [x] Day 092 タイピング練習（typing-practice）
-- [ ] Day 093 画像加工ツール（Pillow）
+- [x] Day 093 画像加工ツール（image-editor / Pillow）
 - [ ] Day 094 Markdown→HTML 変換サイト
 - [ ] Day 095 簡易API（FastAPI、ローカル）
 - [ ] Day 096 ポートフォリオサイト
