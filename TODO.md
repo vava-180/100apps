@@ -138,9 +138,9 @@
 - [x] Day 093 画像加工ツール（image-editor / Pillow）
 - [x] Day 094 Markdown→HTML 変換サイト（markdown-to-html）
 - [x] Day 095 簡易API（FastAPI、ローカル / fastapi-memo）
-- [ ] Day 096 ポートフォリオサイト
-- [ ] Day 097 100apps 記録サイト（一覧自動生成）
-- [ ] Day 098 ミニ機械学習デモ（ローカル）
+- [x] Day 096 ポートフォリオサイト（portfolio）
+- [x] Day 097 100apps 記録サイト（一覧自動生成 / 100apps-index）
+- [x] Day 098 ミニ機械学習デモ（線形回帰 / ml-linear-regression）
 - [ ] Day 099 まとめツール（人気アプリの合体）
 - [ ] Day 100 総集編アプリ（チャレンジの集大成）
 
