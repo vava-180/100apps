@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>100apps 記録サイト</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", "Meiryo", sans-serif; color: #111827; background: #f3f4f6; }
+  header { background: linear-gradient(135deg,#4f46e5,#06b6d4); color:#fff; text-align:center; padding:56px 20px; }
+  header h1 { font-size: 2rem; }
+  header p { margin-top: 8px; opacity: .95; }
+  main { max-width: 960px; margin: 0 auto; padding: 32px 20px; }
+  section { margin-bottom: 36px; }
+  h2 { font-size: 1.2rem; color:#4f46e5; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 16px; }
+  h2 small { color:#6b7280; font-weight: normal; font-size: .85rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 12px; }
+  .card { display:flex; flex-direction:column; gap:4px; background:#fff; border:1px solid #eee;
+          border-radius:10px; padding:14px; text-decoration:none; color:#111827; transition:transform .12s; }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,.08); }
+  .num { font-size:.78rem; font-weight:700; color:#06b6d4; }
+  .title { font-size:.95rem; }
+  footer { text-align:center; color:#9ca3af; font-size:.85rem; padding:24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>100apps 記録サイト</h1>
+  <p>100日100アプリチャレンジの全作品一覧（自動生成）</p>
+  <p>現在 98 / 100 本　更新日: 2026-06-23</p>
+</header>
+<main>
+    <section>
+      <h2>フェーズ1：ブラウザツール（HTML/CSS/JS） <small>（20本）</small></h2>
+      <div class="grid">
+      <a class="card" href="../day001-character-counter/index.html"><span class="num">Day 001</span><span class="title">Day 001: 文字数カウンター</span></a>
+      <a class="card" href="../day002-zenkaku-hankaku/index.html"><span class="num">Day 002</span><span class="title">Day 002: 全角↔半角変換</span></a>
+      <a class="card" href="../day003-text-formatter/index.html"><span class="num">Day 003</span><span class="title">Day 003: テキスト整形ツール</span></a>
+      <a class="card" href="../day004-wareki-calendar/index.html"><span class="num">Day 004</span><span class="title">Day 004: 西暦↔和暦＆営業日計算</span></a>
+      <a class="card" href="../day005-minutes-generator/index.html"><span class="num">Day 005</span><span class="title">Day 005: 議事録ジェネレータ</span></a>
+      <a class="card" href="../day006-table-converter/index.html"><span class="num">Day 006</span><span class="title">Day 006: 表→Markdown / HTML変換</span></a>
+      <a class="card" href="../day007-csv-preview/index.html"><span class="num">Day 007</span><span class="title">Day 007: CSV→表プレビュー＆印刷</span></a>
+      <a class="card" href="../day008-estimate-generator/index.html"><span class="num">Day 008</span><span class="title">Day 008: 簡易見積書ジェネレータ</span></a>
+      <a class="card" href="../day009-qr-code/index.html"><span class="num">Day 009</span><span class="title">Day 009: QRコード生成</span></a>
+      <a class="card" href="../day010-image-resize/index.html"><span class="num">Day 010</span><span class="title">Day 010: 画像リサイズ・圧縮</span></a>
+      <a class="card" href="../day011-password-generator/index.html"><span class="num">Day 011</span><span class="title">Day 011: パスワード生成ツール</span></a>
+      <a class="card" href="../day012-unit-converter/index.html"><span class="num">Day 012</span><span class="title">Day 012: 単位換算ツール</span></a>
+      <a class="card" href="../day013-color-picker/index.html"><span class="num">Day 013</span><span class="title">Day 013: カラーピッカー＆パレット</span></a>
+      <a class="card" href="../day014-warikan/index.html"><span class="num">Day 014</span><span class="title">Day 014: 割り勘計算機</span></a>
+      <a class="card" href="../day015-stopwatch-timer/index.html"><span class="num">Day 015</span><span class="title">Day 015: ストップウォッチ＆タイマー</span></a>
+      <a class="card" href="../day016-markdown-preview/index.html"><span class="num">Day 016</span><span class="title">Day 016: Markdownプレビュー</span></a>
+      <a class="card" href="../day017-gantt-chart/index.html"><span class="num">Day 017</span><span class="title">Day 017: ガントチャート作成</span></a>
+      <a class="card" href="../day018-todo-list/index.html"><span class="num">Day 018</span><span class="title">Day 018: TODOリスト（保存対応）</span></a>
+      <a class="card" href="../day019-pomodoro/index.html"><span class="num">Day 019</span><span class="title">Day 019: ポモドーロタイマー</span></a>
+      <a class="card" href="../day020-lottery/index.html"><span class="num">Day 020</span><span class="title">Day 020: おみくじ／抽選ツール</span></a>
+      </div>
+    </section>
+    <section>
+      <h2>フェーズ2：実務ツール（Python） <small>（20本）</small></h2>
+      <div class="grid">
+      <a class="card" href="../day021-batch-rename/README.md"><span class="num">Day 021</span><span class="title">Day 021: ファイル一括リネームツール（Python）</span></a>
+      <a class="card" href="../day022-csv-merge/README.md"><span class="num">Day 022</span><span class="title">Day 022: 複数CSV結合ツール（Python）</span></a>
+      <a class="card" href="../day023-pdf-tool/README.md"><span class="num">Day 023</span><span class="title">Day 023: PDF結合・分割ツール（Python）</span></a>
+      <a class="card" href="../day024-file-organizer/README.md"><span class="num">Day 024</span><span class="title">Day 024: フォルダ自動仕分けツール（Python）</span></a>
+      <a class="card" href="../day025-duplicate-finder/README.md"><span class="num">Day 025</span><span class="title">Day 025: 重複ファイル検出ツール（Python）</span></a>
+      <a class="card" href="../day026-excel-ng-finder/README.md"><span class="num">Day 026</span><span class="title">Day 026: Excel「NG箇所」検出＆一覧化ツール（Python）</span></a>
+      <a class="card" href="../day027-text-replace/README.md"><span class="num">Day 027</span><span class="title">Day 027: テキスト一括置換ツール（Python）</span></a>
+      <a class="card" href="../day028-folder-search/README.md"><span class="num">Day 028</span><span class="title">Day 028: フォルダ内 横断検索ツール（Python）</span></a>
+      <a class="card" href="../day029-encoding-convert/README.md"><span class="num">Day 029</span><span class="title">Day 029: 文字コード一括変換ツール（Python）</span></a>
+      <a class="card" href="../day030-csv-aggregate/README.md"><span class="num">Day 030</span><span class="title">Day 030: CSV集計・ピボットツール（Python）</span></a>
+      <a class="card" href="../day031-csv-filter/README.md"><span class="num">Day 031</span><span class="title">Day 031: CSV 列の抽出・絞り込みツール（Python）</span></a>
+      <a class="card" href="../day032-folder-size/README.md"><span class="num">Day 032</span><span class="title">Day 032: フォルダ容量レポートツール（Python）</span></a>
+      <a class="card" href="../day033-folder-ledger/README.md"><span class="num">Day 033</span><span class="title">Day 033: フォルダ台帳CSV出力ツール（Python）</span></a>
+      <a class="card" href="../day034-file-diff/README.md"><span class="num">Day 034</span><span class="title">Day 034: 2ファイル差分比較ツール（Python）</span></a>
+      <a class="card" href="../day035-daily-template/README.md"><span class="num">Day 035</span><span class="title">Day 035: 日報・議事録テンプレ自動生成ツール（Python）</span></a>
+      <a class="card" href="../day036-zip-tool/README.md"><span class="num">Day 036</span><span class="title">Day 036: ZIP一括 圧縮・解凍ツール（Python）</span></a>
+      <a class="card" href="../day037-mail-merge/README.md"><span class="num">Day 037</span><span class="title">Day 037: 差し込みテキスト量産ツール（Python）</span></a>
+      <a class="card" href="../day038-pdf-extract/README.md"><span class="num">Day 038</span><span class="title">Day 038: PDFテキスト抽出ツール（Python）</span></a>
+      <a class="card" href="../day039-excel-merge/README.md"><span class="num">Day 039</span><span class="title">Day 039: 複数Excel→1ブック集約ツール（Python）</span></a>
+      <a class="card" href="../day040-text-stats/README.md"><span class="num">Day 040</span><span class="title">Day 040: ファイル一括 文字数・行数統計ツール（Python）</span></a>
+      </div>
+    </section>
+    <section>
+      <h2>フェーズ3：Office自動化（VBA） <small>（25本）</small></h2>
+      <div class="grid">
+      <a class="card" href="../day041-vba-sheets-from-list/README.md"><span class="num">Day 041</span><span class="title">Day 041: 名簿からシート一括作成（Excel VBA）</span></a>
+      <a class="card" href="../day042-vba-consolidate/README.md"><span class="num">Day 042</span><span class="title">Day 042: 複数ブック集約マクロ（Excel VBA）</span></a>
+      <a class="card" href="../day043-vba-duplicate-rows/README.md"><span class="num">Day 043</span><span class="title">Day 043: 重複行のハイライト／削除（Excel VBA）</span></a>
+      <a class="card" href="../day044-vba-format-cells/README.md"><span class="num">Day 044</span><span class="title">Day 044: セル文字の一括整形（Excel VBA）</span></a>
+      <a class="card" href="../day045-vba-furigana/README.md"><span class="num">Day 045</span><span class="title">Day 045: ふりがな自動付与（Excel VBA）</span></a>
+      <a class="card" href="../day046-vba-address-split/README.md"><span class="num">Day 046</span><span class="title">Day 046: 住所分割（都道府県／市区町村以降）（Excel VBA）</span></a>
+      <a class="card" href="../day047-vba-attendance/README.md"><span class="num">Day 047</span><span class="title">Day 047: 勤怠集計マクロ（Excel VBA）</span></a>
+      <a class="card" href="../day048-vba-invoices/README.md"><span class="num">Day 048</span><span class="title">Day 048: 請求書テンプレ一括出力（Excel VBA）</span></a>
+      <a class="card" href="../day049-vba-charts/README.md"><span class="num">Day 049</span><span class="title">Day 049: グラフ一括作成（Excel VBA）</span></a>
+      <a class="card" href="../day050-vba-pagesetup/README.md"><span class="num">Day 050</span><span class="title">Day 050: 印刷範囲・ページ設定の一括適用（Excel VBA）</span></a>
+      <a class="card" href="../day051-vba-cleanup/README.md"><span class="num">Day 051</span><span class="title">Day 051: 不要シート・空白行の一括削除（Excel VBA）</span></a>
+      <a class="card" href="../day052-vba-toc/README.md"><span class="num">Day 052</span><span class="title">Day 052: ブック内ハイパーリンク目次（Excel VBA）</span></a>
+      <a class="card" href="../day053-vba-csv-import/README.md"><span class="num">Day 053</span><span class="title">Day 053: CSV取り込み整形マクロ（Excel VBA）</span></a>
+      <a class="card" href="../day054-vba-condformat/README.md"><span class="num">Day 054</span><span class="title">Day 054: 条件付き書式の一括設定（Excel VBA）</span></a>
+      <a class="card" href="../day055-vba-calendar/README.md"><span class="num">Day 055</span><span class="title">Day 055: カレンダー自動生成（Excel VBA）</span></a>
+      <a class="card" href="../day056-vba-excel-to-ppt/README.md"><span class="num">Day 056</span><span class="title">Day 056: 表をPowerPointスライドへ自動転記（Excel VBA）</span></a>
+      <a class="card" href="../day057-vba-ppt-toc/README.md"><span class="num">Day 057</span><span class="title">Day 057: PowerPoint 目次スライド自動生成（PowerPoint VBA）</span></a>
+      <a class="card" href="../day058-vba-ppt-font/README.md"><span class="num">Day 058</span><span class="title">Day 058: 全スライドのフォント統一（PowerPoint VBA）</span></a>
+      <a class="card" href="../day059-vba-ppt-images/README.md"><span class="num">Day 059</span><span class="title">Day 059: 画像を一括でスライド化（PowerPoint VBA）</span></a>
+      <a class="card" href="../day060-vba-ppt-replace-text/README.md"><span class="num">Day 060</span><span class="title">Day 060: スライドの文字を一括差し替え（PowerPoint VBA）</span></a>
+      <a class="card" href="../day061-vba-ppt-to-markdown/README.md"><span class="num">Day 061</span><span class="title">Day 061: スライド内容をMarkdownに書き出し（PowerPoint VBA）</span></a>
+      <a class="card" href="../day062-vba-outlook-mailmerge/README.md"><span class="num">Day 062</span><span class="title">Day 062: Outlook 一斉メール下書き作成（差し込み）（Outlook VBA）</span></a>
+      <a class="card" href="../day063-vba-outlook-inbox-to-excel/README.md"><span class="num">Day 063</span><span class="title">Day 063: 受信メール一覧をExcelに書き出し（Outlook VBA）</span></a>
+      <a class="card" href="../day064-vba-outlook-save-attachments/README.md"><span class="num">Day 064</span><span class="title">Day 064: 添付ファイル一括保存（Outlook VBA）</span></a>
+      <a class="card" href="../day065-vba-outlook-template/README.md"><span class="num">Day 065</span><span class="title">Day 065: 定型メールのテンプレ送信補助（Outlook VBA）</span></a>
+      </div>
+    </section>
+    <section>
+      <h2>フェーズ4：スマホアプリ（Flutter） <small>（25本）</small></h2>
+      <div class="grid">
+      <a class="card" href="../day066-flutter-counter/README.md"><span class="num">Day 066</span><span class="title">Day 066: カウンター（Flutter入門）</span></a>
+      <a class="card" href="../day067-flutter-memo/README.md"><span class="num">Day 067</span><span class="title">Day 067: メモ帳（Flutter）</span></a>
+      <a class="card" href="../day068-flutter-todo/README.md"><span class="num">Day 068</span><span class="title">Day 068: ToDoアプリ（Flutter）</span></a>
+      <a class="card" href="../day069-flutter-shopping/README.md"><span class="num">Day 069</span><span class="title">Day 069: 買い物リスト（Flutter）</span></a>
+      <a class="card" href="../day070-flutter-kakeibo/README.md"><span class="num">Day 070</span><span class="title">Day 070: 家計簿（Flutter）</span></a>
+      <a class="card" href="../day071-flutter-weight/README.md"><span class="num">Day 071</span><span class="title">Day 071: 体重記録（Flutter）</span></a>
+      <a class="card" href="../day072-flutter-habit/README.md"><span class="num">Day 072</span><span class="title">Day 072: 習慣トラッカー（Flutter）</span></a>
+      <a class="card" href="../day073-flutter-stopwatch/README.md"><span class="num">Day 073</span><span class="title">Day 073: ストップウォッチ（Flutter）</span></a>
+      <a class="card" href="../day074-flutter-pomodoro/README.md"><span class="num">Day 074</span><span class="title">Day 074: ポモドーロタイマー（Flutter）</span></a>
+      <a class="card" href="../day075-flutter-bmi/README.md"><span class="num">Day 075</span><span class="title">Day 075: BMI計算（Flutter）</span></a>
+      <a class="card" href="../day076-flutter-warikan/README.md"><span class="num">Day 076</span><span class="title">Day 076: 割り勘（Flutter）</span></a>
+      <a class="card" href="../day077-flutter-tip/README.md"><span class="num">Day 077</span><span class="title">Day 077: チップ計算（Flutter）</span></a>
+      <a class="card" href="../day078-flutter-unit/README.md"><span class="num">Day 078</span><span class="title">Day 078: 単位変換（長さ）（Flutter）</span></a>
+      <a class="card" href="../day079-flutter-currency/README.md"><span class="num">Day 079</span><span class="title">Day 079: 為替計算（Flutter）</span></a>
+      <a class="card" href="../day080-flutter-password/README.md"><span class="num">Day 080</span><span class="title">Day 080: パスワード生成（Flutter）</span></a>
+      <a class="card" href="../day081-flutter-qrcode/README.md"><span class="num">Day 081</span><span class="title">Day 081: QRコード表示（Flutter）</span></a>
+      <a class="card" href="../day082-flutter-colorpicker/README.md"><span class="num">Day 082</span><span class="title">Day 082: カラーピッカー（Flutter）</span></a>
+      <a class="card" href="../day083-flutter-omikuji/README.md"><span class="num">Day 083</span><span class="title">Day 083: おみくじ（Flutter）</span></a>
+      <a class="card" href="../day084-flutter-dice/README.md"><span class="num">Day 084</span><span class="title">Day 084: サイコロ（Flutter）</span></a>
+      <a class="card" href="../day085-flutter-gacha/README.md"><span class="num">Day 085</span><span class="title">Day 085: 抽選・ガチャ（Flutter）</span></a>
+      <a class="card" href="../day086-flutter-quotes/README.md"><span class="num">Day 086</span><span class="title">Day 086: 名言表示（Flutter）</span></a>
+      <a class="card" href="../day087-flutter-flashcard/README.md"><span class="num">Day 087</span><span class="title">Day 087: 単語帳（フラッシュカード）（Flutter）</span></a>
+      <a class="card" href="../day088-flutter-diary/README.md"><span class="num">Day 088</span><span class="title">Day 088: 日記（Flutter）</span></a>
+      <a class="card" href="../day089-flutter-greeting/README.md"><span class="num">Day 089</span><span class="title">Day 089: 多言語あいさつ（Flutter）</span></a>
+      <a class="card" href="../day090-flutter-calculator/README.md"><span class="num">Day 090</span><span class="title">Day 090: ミニ電卓（Flutter）</span></a>
+      </div>
+    </section>
+    <section>
+      <h2>フェーズ5：集大成 <small>（8本）</small></h2>
+      <div class="grid">
+      <a class="card" href="../day091-number-guessing/index.html"><span class="num">Day 091</span><span class="title">Day 091: 数当てゲーム</span></a>
+      <a class="card" href="../day092-typing-practice/index.html"><span class="num">Day 092</span><span class="title">Day 092: タイピング練習</span></a>
+      <a class="card" href="../day093-image-editor/README.md"><span class="num">Day 093</span><span class="title">Day 093: 画像加工ツール（Python + Pillow）</span></a>
+      <a class="card" href="../day094-markdown-to-html/index.html"><span class="num">Day 094</span><span class="title">Day 094: Markdown → HTML 変換</span></a>
+      <a class="card" href="../day095-fastapi-memo/README.md"><span class="num">Day 095</span><span class="title">Day 095: 簡易メモ帳API（Python + FastAPI・ローカル）</span></a>
+      <a class="card" href="../day096-portfolio/index.html"><span class="num">Day 096</span><span class="title">Day 096: ポートフォリオサイト</span></a>
+      <a class="card" href="../day097-100apps-index/index.html"><span class="num">Day 097</span><span class="title">Day 097: 100apps 記録サイト（一覧自動生成）</span></a>
+      <a class="card" href="../day098-ml-linear-regression/README.md"><span class="num">Day 098</span><span class="title">Day 098: ミニ機械学習デモ（線形回帰）</span></a>
+      </div>
+    </section>
+</main>
+<footer>このページは generate_site.py で自動生成されました ・ Day 097 / 100</footer>
+</body>
+</html>
