@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day 100 総集編 — 100apps チャレンジ達成</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      color: #111827; background: #f3f4f6; line-height: 1.7;
+    }
+    a { color: #4f46e5; }
+    .hero {
+      background: linear-gradient(135deg,#4f46e5,#0e7490); color: #fff;
+      text-align: center; padding: 72px 20px;
+    }
+    .hero .badge { font-size: 3.4rem; font-weight: 800; letter-spacing: 1px; }
+    .hero h1 { font-size: 1.6rem; margin: 8px 0; }
+    .hero p { opacity: .95; max-width: 620px; margin: 0 auto; }
+    main { max-width: 880px; margin: 0 auto; padding: 40px 20px; }
+    section { margin-bottom: 40px; }
+    h2 { font-size: 1.3rem; color: #4f46e5; margin-bottom: 16px; text-align: center; }
+
+    /* 数字で見る実績 */
+    .stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; }
+    .stat { text-align: center; }
+    .stat .big { font-size: 2.6rem; font-weight: 800; color: #0e7490; }
+    .stat .label { color: #6b7280; font-size: .9rem; }
+
+    /* フェーズ進捗バー */
+    .phase { margin-bottom: 12px; }
+    .phase .top { display: flex; justify-content: space-between; font-size: .9rem; margin-bottom: 4px; }
+    .bar { background: #e5e7eb; border-radius: 999px; height: 14px; overflow: hidden; }
+    .bar > span { display: block; height: 100%; background: linear-gradient(90deg,#4f46e5,#0e7490); border-radius: 999px; }
+
+    /* アプリガチャ */
+    .gacha { text-align: center; background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 4px 14px rgba(0,0,0,.05); }
+    button {
+      cursor: pointer; border: none; border-radius: 999px; padding: 14px 28px;
+      font-size: 1.05rem; font-weight: 700; color: #fff; background: #4f46e5;
+    }
+    button:hover { opacity: .92; }
+    button:focus-visible { outline: 3px solid #f59e0b; outline-offset: 3px; }
+    .pick {
+      margin-top: 22px; min-height: 90px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 4px;
+    }
+    .pick .day { font-size: .8rem; font-weight: 700; color: #0e7490; }
+    .pick .name { font-size: 1.5rem; font-weight: 800; }
+    .pick a { font-size: .95rem; }
+    .links { text-align: center; }
+    .links a {
+      display: inline-block; margin: 6px; padding: 10px 20px; border: 1px solid #4f46e5;
+      border-radius: 999px; text-decoration: none;
+    }
+    .reflection { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 4px 14px rgba(0,0,0,.05); }
+    footer { text-align: center; color: #9ca3af; font-size: .85rem; padding: 28px; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="badge">100 / 100</div>
+    <h1>🎉 100日100アプリチャレンジ 達成！</h1>
+    <p>IT初心者がプロのAIアシスタントと二人三脚で、毎日ひとつアプリを作り続けた100日間の集大成です。</p>
+  </div>
+
+  <main>
+    <!-- 実績 -->
+    <section>
+      <h2>数字で見る100日</h2>
+      <div class="stats">
+        <div class="stat"><div class="big" id="statApps">0</div><div class="label">作ったアプリ</div></div>
+        <div class="stat"><div class="big">5</div><div class="label">技術フェーズ</div></div>
+        <div class="stat"><div class="big">5</div><div class="label">使った言語系</div></div>
+      </div>
+    </section>
+
+    <!-- フェーズ進捗 -->
+    <section>
+      <h2>フェーズ別の歩み</h2>
+      <div id="phases"></div>
+    </section>
+
+    <!-- アプリガチャ -->
+    <section>
+      <h2>アプリガチャ</h2>
+      <div class="gacha">
+        <p>ボタンを押すと、100本の中から1本をランダムに引きます。</p>
+        <button id="gachaBtn">🎲 ランダムに1本引く</button>
+        <div class="pick" id="pick"></div>
+      </div>
+    </section>
+
+    <!-- リンク -->
+    <section class="links">
+      <h2>もっと見る</h2>
+      <a href="../day097-100apps-index/index.html">📚 全アプリ一覧（記録サイト）</a>
+      <a href="../day096-portfolio/index.html">🏠 ポートフォリオ</a>
+      <a href="https://github.com/vava-180/100apps" target="_blank" rel="noopener noreferrer">💻 GitHub</a>
+    </section>
+
+    <!-- ふりかえり -->
+    <section>
+      <h2>ふりかえり</h2>
+      <div class="reflection">
+        <p>ブラウザツールから始まり、Pythonでの実務自動化、VBAでのOffice自動化、Flutterでのスマホアプリ、そして集大成まで。
+        「小さく作って毎日完成させる」を100回くり返したことで、できることが少しずつ広がりました。</p>
+        <p style="margin-top:10px">作ったものはすべてGitHubで公開しています。次の100日も、学びを積み重ねていきます。ありがとうございました！</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>100日100アプリチャレンジ Day 100 / 100 ・ 完</footer>
+
+  <script>
+    // ===== 全アプリの一覧（ビルド時にフォルダから自動で埋め込み）=====
+    // n=Day番号, f=フォルダ名, t=タイトル, l=リンク先ファイル
+    const APPS = /*__APPS__*/[{"n":1,"f":"day001-character-counter","t":"文字数カウンター","l":"index.html"},{"n":2,"f":"day002-zenkaku-hankaku","t":"全角↔半角変換","l":"index.html"},{"n":3,"f":"day003-text-formatter","t":"テキスト整形ツール","l":"index.html"},{"n":4,"f":"day004-wareki-calendar","t":"西暦↔和暦＆営業日計算","l":"index.html"},{"n":5,"f":"day005-minutes-generator","t":"議事録ジェネレータ","l":"index.html"},{"n":6,"f":"day006-table-converter","t":"表→Markdown / HTML変換","l":"index.html"},{"n":7,"f":"day007-csv-preview","t":"CSV→表プレビュー＆印刷","l":"index.html"},{"n":8,"f":"day008-estimate-generator","t":"簡易見積書ジェネレータ","l":"index.html"},{"n":9,"f":"day009-qr-code","t":"QRコード生成","l":"index.html"},{"n":10,"f":"day010-image-resize","t":"画像リサイズ・圧縮","l":"index.html"},{"n":11,"f":"day011-password-generator","t":"パスワード生成ツール","l":"index.html"},{"n":12,"f":"day012-unit-converter","t":"単位換算ツール","l":"index.html"},{"n":13,"f":"day013-color-picker","t":"カラーピッカー＆パレット","l":"index.html"},{"n":14,"f":"day014-warikan","t":"割り勘計算機","l":"index.html"},{"n":15,"f":"day015-stopwatch-timer","t":"ストップウォッチ＆タイマー","l":"index.html"},{"n":16,"f":"day016-markdown-preview","t":"Markdownプレビュー","l":"index.html"},{"n":17,"f":"day017-gantt-chart","t":"ガントチャート作成","l":"index.html"},{"n":18,"f":"day018-todo-list","t":"TODOリスト（保存対応）","l":"index.html"},{"n":19,"f":"day019-pomodoro","t":"ポモドーロタイマー","l":"index.html"},{"n":20,"f":"day020-lottery","t":"おみくじ／抽選ツール","l":"index.html"},{"n":21,"f":"day021-batch-rename","t":"ファイル一括リネームツール（Python）","l":"README.md"},{"n":22,"f":"day022-csv-merge","t":"複数CSV結合ツール（Python）","l":"README.md"},{"n":23,"f":"day023-pdf-tool","t":"PDF結合・分割ツール（Python）","l":"README.md"},{"n":24,"f":"day024-file-organizer","t":"フォルダ自動仕分けツール（Python）","l":"README.md"},{"n":25,"f":"day025-duplicate-finder","t":"重複ファイル検出ツール（Python）","l":"README.md"},{"n":26,"f":"day026-excel-ng-finder","t":"Excel「NG箇所」検出＆一覧化ツール（Python）","l":"README.md"},{"n":27,"f":"day027-text-replace","t":"テキスト一括置換ツール（Python）","l":"README.md"},{"n":28,"f":"day028-folder-search","t":"フォルダ内 横断検索ツール（Python）","l":"README.md"},{"n":29,"f":"day029-encoding-convert","t":"文字コード一括変換ツール（Python）","l":"README.md"},{"n":30,"f":"day030-csv-aggregate","t":"CSV集計・ピボットツール（Python）","l":"README.md"},{"n":31,"f":"day031-csv-filter","t":"CSV 列の抽出・絞り込みツール（Python）","l":"README.md"},{"n":32,"f":"day032-folder-size","t":"フォルダ容量レポートツール（Python）","l":"README.md"},{"n":33,"f":"day033-folder-ledger","t":"フォルダ台帳CSV出力ツール（Python）","l":"README.md"},{"n":34,"f":"day034-file-diff","t":"2ファイル差分比較ツール（Python）","l":"README.md"},{"n":35,"f":"day035-daily-template","t":"日報・議事録テンプレ自動生成ツール（Python）","l":"README.md"},{"n":36,"f":"day036-zip-tool","t":"ZIP一括 圧縮・解凍ツール（Python）","l":"README.md"},{"n":37,"f":"day037-mail-merge","t":"差し込みテキスト量産ツール（Python）","l":"README.md"},{"n":38,"f":"day038-pdf-extract","t":"PDFテキスト抽出ツール（Python）","l":"README.md"},{"n":39,"f":"day039-excel-merge","t":"複数Excel→1ブック集約ツール（Python）","l":"README.md"},{"n":40,"f":"day040-text-stats","t":"ファイル一括 文字数・行数統計ツール（Python）","l":"README.md"},{"n":41,"f":"day041-vba-sheets-from-list","t":"名簿からシート一括作成（Excel VBA）","l":"README.md"},{"n":42,"f":"day042-vba-consolidate","t":"複数ブック集約マクロ（Excel VBA）","l":"README.md"},{"n":43,"f":"day043-vba-duplicate-rows","t":"重複行のハイライト／削除（Excel VBA）","l":"README.md"},{"n":44,"f":"day044-vba-format-cells","t":"セル文字の一括整形（Excel VBA）","l":"README.md"},{"n":45,"f":"day045-vba-furigana","t":"ふりがな自動付与（Excel VBA）","l":"README.md"},{"n":46,"f":"day046-vba-address-split","t":"住所分割（都道府県／市区町村以降）（Excel VBA）","l":"README.md"},{"n":47,"f":"day047-vba-attendance","t":"勤怠集計マクロ（Excel VBA）","l":"README.md"},{"n":48,"f":"day048-vba-invoices","t":"請求書テンプレ一括出力（Excel VBA）","l":"README.md"},{"n":49,"f":"day049-vba-charts","t":"グラフ一括作成（Excel VBA）","l":"README.md"},{"n":50,"f":"day050-vba-pagesetup","t":"印刷範囲・ページ設定の一括適用（Excel VBA）","l":"README.md"},{"n":51,"f":"day051-vba-cleanup","t":"不要シート・空白行の一括削除（Excel VBA）","l":"README.md"},{"n":52,"f":"day052-vba-toc","t":"ブック内ハイパーリンク目次（Excel VBA）","l":"README.md"},{"n":53,"f":"day053-vba-csv-import","t":"CSV取り込み整形マクロ（Excel VBA）","l":"README.md"},{"n":54,"f":"day054-vba-condformat","t":"条件付き書式の一括設定（Excel VBA）","l":"README.md"},{"n":55,"f":"day055-vba-calendar","t":"カレンダー自動生成（Excel VBA）","l":"README.md"},{"n":56,"f":"day056-vba-excel-to-ppt","t":"表をPowerPointスライドへ自動転記（Excel VBA）","l":"README.md"},{"n":57,"f":"day057-vba-ppt-toc","t":"PowerPoint 目次スライド自動生成（PowerPoint VBA）","l":"README.md"},{"n":58,"f":"day058-vba-ppt-font","t":"全スライドのフォント統一（PowerPoint VBA）","l":"README.md"},{"n":59,"f":"day059-vba-ppt-images","t":"画像を一括でスライド化（PowerPoint VBA）","l":"README.md"},{"n":60,"f":"day060-vba-ppt-replace-text","t":"スライドの文字を一括差し替え（PowerPoint VBA）","l":"README.md"},{"n":61,"f":"day061-vba-ppt-to-markdown","t":"スライド内容をMarkdownに書き出し（PowerPoint VBA）","l":"README.md"},{"n":62,"f":"day062-vba-outlook-mailmerge","t":"Outlook 一斉メール下書き作成（差し込み）（Outlook VBA）","l":"README.md"},{"n":63,"f":"day063-vba-outlook-inbox-to-excel","t":"受信メール一覧をExcelに書き出し（Outlook VBA）","l":"README.md"},{"n":64,"f":"day064-vba-outlook-save-attachments","t":"添付ファイル一括保存（Outlook VBA）","l":"README.md"},{"n":65,"f":"day065-vba-outlook-template","t":"定型メールのテンプレ送信補助（Outlook VBA）","l":"README.md"},{"n":66,"f":"day066-flutter-counter","t":"カウンター（Flutter入門）","l":"README.md"},{"n":67,"f":"day067-flutter-memo","t":"メモ帳（Flutter）","l":"README.md"},{"n":68,"f":"day068-flutter-todo","t":"ToDoアプリ（Flutter）","l":"README.md"},{"n":69,"f":"day069-flutter-shopping","t":"買い物リスト（Flutter）","l":"README.md"},{"n":70,"f":"day070-flutter-kakeibo","t":"家計簿（Flutter）","l":"README.md"},{"n":71,"f":"day071-flutter-weight","t":"体重記録（Flutter）","l":"README.md"},{"n":72,"f":"day072-flutter-habit","t":"習慣トラッカー（Flutter）","l":"README.md"},{"n":73,"f":"day073-flutter-stopwatch","t":"ストップウォッチ（Flutter）","l":"README.md"},{"n":74,"f":"day074-flutter-pomodoro","t":"ポモドーロタイマー（Flutter）","l":"README.md"},{"n":75,"f":"day075-flutter-bmi","t":"BMI計算（Flutter）","l":"README.md"},{"n":76,"f":"day076-flutter-warikan","t":"割り勘（Flutter）","l":"README.md"},{"n":77,"f":"day077-flutter-tip","t":"チップ計算（Flutter）","l":"README.md"},{"n":78,"f":"day078-flutter-unit","t":"単位変換（長さ）（Flutter）","l":"README.md"},{"n":79,"f":"day079-flutter-currency","t":"為替計算（Flutter）","l":"README.md"},{"n":80,"f":"day080-flutter-password","t":"パスワード生成（Flutter）","l":"README.md"},{"n":81,"f":"day081-flutter-qrcode","t":"QRコード表示（Flutter）","l":"README.md"},{"n":82,"f":"day082-flutter-colorpicker","t":"カラーピッカー（Flutter）","l":"README.md"},{"n":83,"f":"day083-flutter-omikuji","t":"おみくじ（Flutter）","l":"README.md"},{"n":84,"f":"day084-flutter-dice","t":"サイコロ（Flutter）","l":"README.md"},{"n":85,"f":"day085-flutter-gacha","t":"抽選・ガチャ（Flutter）","l":"README.md"},{"n":86,"f":"day086-flutter-quotes","t":"名言表示（Flutter）","l":"README.md"},{"n":87,"f":"day087-flutter-flashcard","t":"単語帳（フラッシュカード）（Flutter）","l":"README.md"},{"n":88,"f":"day088-flutter-diary","t":"日記（Flutter）","l":"README.md"},{"n":89,"f":"day089-flutter-greeting","t":"多言語あいさつ（Flutter）","l":"README.md"},{"n":90,"f":"day090-flutter-calculator","t":"ミニ電卓（Flutter）","l":"README.md"},{"n":91,"f":"day091-number-guessing","t":"数当てゲーム","l":"index.html"},{"n":92,"f":"day092-typing-practice","t":"タイピング練習","l":"index.html"},{"n":93,"f":"day093-image-editor","t":"画像加工ツール（Python + Pillow）","l":"README.md"},{"n":94,"f":"day094-markdown-to-html","t":"Markdown → HTML 変換","l":"index.html"},{"n":95,"f":"day095-fastapi-memo","t":"簡易メモ帳API（Python + FastAPI・ローカル）","l":"README.md"},{"n":96,"f":"day096-portfolio","t":"ポートフォリオサイト","l":"index.html"},{"n":97,"f":"day097-100apps-index","t":"100apps 記録サイト（一覧自動生成）","l":"index.html"},{"n":98,"f":"day098-ml-linear-regression","t":"ミニ機械学習デモ（線形回帰）","l":"README.md"},{"n":99,"f":"day099-toolbox","t":"まとめツール（便利ツール集）","l":"index.html"},{"n":100,"f":"day100-finale","t":"総集編アプリ（チャレンジの集大成）","l":"index.html"}];
+
+    // ===== 実績の数字 =====
+    document.getElementById("statApps").textContent = APPS.length;
+
+    // ===== フェーズ別の本数を数えて進捗バーを描く =====
+    const PHASES = [
+      { from: 1,  to: 20,  label: "フェーズ1：ブラウザツール" },
+      { from: 21, to: 40,  label: "フェーズ2：実務ツール（Python）" },
+      { from: 41, to: 65,  label: "フェーズ3：Office自動化（VBA）" },
+      { from: 66, to: 90,  label: "フェーズ4：スマホアプリ（Flutter）" },
+      { from: 91, to: 100, label: "フェーズ5：集大成" },
+    ];
+    const phasesEl = document.getElementById("phases");
+    for (const ph of PHASES) {
+      const total = ph.to - ph.from + 1;
+      const done = APPS.filter(a => a.n >= ph.from && a.n <= ph.to).length;
+      const pct = Math.round((done / total) * 100);
+
+      // innerHTML を使わず、部品を組み立てて安全に作る
+      const wrap = document.createElement("div");
+      wrap.className = "phase";
+
+      const top = document.createElement("div");
+      top.className = "top";
+      const label = document.createElement("span");
+      label.textContent = ph.label;
+      const ratio = document.createElement("span");
+      ratio.textContent = `${done} / ${total}`;
+      top.append(label, ratio);
+
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      // 進捗バーに役割と数値を持たせる（読み上げ対応）
+      bar.setAttribute("role", "progressbar");
+      bar.setAttribute("aria-valuemin", "0");
+      bar.setAttribute("aria-valuemax", "100");
+      bar.setAttribute("aria-valuenow", String(pct));
+      bar.setAttribute("aria-label", `${ph.label} ${pct}%`);
+      const fill = document.createElement("span");
+      fill.style.width = pct + "%";
+      bar.appendChild(fill);
+
+      wrap.append(top, bar);
+      phasesEl.appendChild(wrap);
+    }
+
+    // ===== アプリガチャ =====
+    const pickEl = document.getElementById("pick");
+    document.getElementById("gachaBtn").addEventListener("click", () => {
+      if (APPS.length === 0) { pickEl.textContent = "アプリ一覧がまだ読み込まれていません。"; return; }
+      // ランダムに1本選ぶ
+      const app = APPS[Math.floor(Math.random() * APPS.length)];
+
+      pickEl.replaceChildren();
+      const day = document.createElement("div"); day.className = "day";
+      day.textContent = "Day " + String(app.n).padStart(3, "0");
+      const name = document.createElement("div"); name.className = "name";
+      name.textContent = app.t; // textContent でタグ混入を防ぐ
+      pickEl.append(day, name);
+
+      // フォルダ名・ファイル名が想定どおりの時だけリンクを作る（変な相対パスへ飛ばさない）
+      const safeFolder = /^day\d+-[A-Za-z0-9._-]+$/.test(app.f);
+      const safeFile = app.l === "index.html" || app.l === "README.md";
+      if (safeFolder && safeFile) {
+        const link = document.createElement("a");
+        link.href = "../" + app.f + "/" + app.l;
+        link.textContent = "このアプリを開く →";
+        pickEl.append(link);
+      }
+    });
+  </script>
+</body>
+</html>

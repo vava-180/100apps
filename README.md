@@ -149,4 +149,8 @@ Day 048〜059 は並行して制作中。
 | 096 | ポートフォリオサイト | ✅ | [index.html](day096-portfolio/index.html) |
 | 097 | 100apps記録サイト（一覧自動生成） | ✅ | [generate_site.py](day097-100apps-index/generate_site.py) |
 | 098 | ミニ機械学習デモ（線形回帰） | ✅ | [linear_regression.py](day098-ml-linear-regression/linear_regression.py) |
+| 099 | まとめツール（便利ツール集） | ✅ | [index.html](day099-toolbox/index.html) |
+| 100 | 総集編アプリ（集大成ダッシュボード） | ✅ | [index.html](day100-finale/index.html) |
+
+🎉 **100 / 100 達成！** 全フェーズ完了しました。総集編は [day100-finale](day100-finale/index.html)、全作品の一覧は [記録サイト](day097-100apps-index/index.html) からどうぞ。
 

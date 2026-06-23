@@ -141,8 +141,8 @@
 - [x] Day 096 ポートフォリオサイト（portfolio）
 - [x] Day 097 100apps 記録サイト（一覧自動生成 / 100apps-index）
 - [x] Day 098 ミニ機械学習デモ（線形回帰 / ml-linear-regression）
-- [ ] Day 099 まとめツール（人気アプリの合体）
-- [ ] Day 100 総集編アプリ（チャレンジの集大成）
+- [x] Day 099 まとめツール（便利ツール集 / toolbox）
+- [x] Day 100 総集編アプリ（集大成ダッシュボード / finale）
 
 ---
 
