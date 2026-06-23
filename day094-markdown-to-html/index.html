@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day 094 Markdown → HTML 変換</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background: #f3f4f6; color: #111827; margin: 0; padding: 20px;
+    }
+    h1 { font-size: 1.3rem; margin: 0 0 4px; }
+    .sub { color: #6b7280; font-size: .9rem; margin: 0 0 16px; }
+    .panes { display: flex; gap: 16px; flex-wrap: wrap; }
+    .pane { flex: 1; min-width: 300px; display: flex; flex-direction: column; }
+    .pane h2 { font-size: .95rem; color: #4f46e5; margin: 0 0 6px; }
+    textarea {
+      width: 100%; height: 420px; resize: vertical; padding: 12px;
+      font-family: "Consolas", "Courier New", monospace; font-size: .95rem;
+      border: 1px solid #d1d5db; border-radius: 10px; line-height: 1.6;
+    }
+    .preview {
+      height: 420px; overflow: auto; padding: 16px; background: #fff;
+      border: 1px solid #d1d5db; border-radius: 10px;
+    }
+    /* プレビュー内の見た目 */
+    .preview h1, .preview h2, .preview h3 { border-bottom: 1px solid #eee; padding-bottom: 4px; }
+    .preview code {
+      background: #f3f4f6; padding: 2px 5px; border-radius: 4px;
+      font-family: "Consolas", monospace; font-size: .9em;
+    }
+    .preview pre {
+      background: #1f2937; color: #f9fafb; padding: 12px; border-radius: 8px; overflow: auto;
+    }
+    .preview pre code { background: none; color: inherit; padding: 0; }
+    .preview blockquote {
+      border-left: 4px solid #c7d2fe; margin: 8px 0; padding: 4px 12px; color: #4b5563;
+    }
+    .preview a { color: #4f46e5; }
+    .preview table { border-collapse: collapse; }
+    .toolbar { margin: 8px 0; display: flex; gap: 8px; align-items: center; }
+    button {
+      cursor: pointer; border: none; border-radius: 8px; padding: 8px 14px;
+      font-size: .9rem; font-weight: 600; color: #fff; background: #4f46e5;
+    }
+    button:hover { opacity: .92; }
+    #htmlSource { display: none; height: 160px; }
+    .hint { color: #6b7280; font-size: .85rem; }
+    .footer { margin-top: 20px; text-align: center; color: #9ca3af; font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <h1>📝 Markdown → HTML 変換</h1>
+  <p class="sub">左に Markdown を書くと、右にプレビューが出ます。自前パーサで変換（外部ライブラリ・ネット通信なし）。</p>
+
+  <div class="panes">
+    <div class="pane">
+      <h2>Markdown を入力</h2>
+      <textarea id="input" spellcheck="false"></textarea>
+    </div>
+    <div class="pane">
+      <h2>プレビュー</h2>
+      <div class="preview" id="preview"></div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button id="toggleBtn">HTMLコードを表示</button>
+    <button id="copyBtn">HTMLをコピー</button>
+    <span class="hint" id="hint">簡易Markdown対応：見出し / 太字 / 斜体 / コード / リンク / リスト / 引用 / 水平線 / コードブロック（リストの継続行・URL内の括弧などは非対応）</span>
+  </div>
+  <textarea id="htmlSource" readonly spellcheck="false"></textarea>
+
+  <p class="footer">100日100アプリチャレンジ Day 094 / 100</p>
+
+  <script>
+    // ===== Markdown → HTML 変換（自前パーサ）=====
+
+    // (1) HTMLとして危険な文字を先に無害化する（タグの混入＝XSSを防ぐ）
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // (2) リンク先が安全なURLかを確かめる（javascript: などを弾く）
+    function isSafeUrl(url) {
+      return /^(https?:\/\/|mailto:|\/|#|\.\/|\.\.\/)/i.test(url);
+    }
+
+    // (3) 行の中の装飾（太字・斜体・リンク）を変換する。※コードは別で処理済み
+    function inlineEmphasis(s) {
+      // リンク [表示](URL)　… URLが安全なときだけ <a> にする
+      s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label, url) =>
+        isSafeUrl(url) ? `<a href="${url}" target="_blank" rel="noopener">${label}</a>` : m
+      );
+      // 太字 **text**（先に処理。内側に *斜体* があってもよいよう最短一致 .+? を使う）
+      s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      // 斜体 *text*（太字を消した後なので、残った1個ずつの * が対象）
+      s = s.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+      return s;
+    }
+
+    // (4) 行の装飾を、コード `..` を保護しつつ変換する
+    function inline(text) {
+      // 先にHTMLエスケープ。これで中身は安全になり、* _ ` などの記号は残る
+      const escaped = escapeHtml(text);
+      // バッククォートのコード部分とそれ以外に分けて処理する（空コードも拾えるよう * を使う）
+      const parts = escaped.split(/(`[^`]*`)/g);
+      return parts.map(part => {
+        if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+          return "<code>" + part.slice(1, -1) + "</code>"; // コードは装飾しない
+        }
+        return inlineEmphasis(part);
+      }).join("");
+    }
+
+    // (5) 本体：Markdown 全体を行ごとに見てブロックを組み立てる
+    function mdToHtml(md) {
+      const lines = md.replace(/\r\n?/g, "\n").split("\n");
+      const out = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        const line = lines[i];
+
+        // コードブロック ```
+        if (/^\s*```/.test(line)) {
+          const code = [];
+          i++;
+          while (i < lines.length && !/^\s*```/.test(lines[i])) {
+            code.push(escapeHtml(lines[i]));
+            i++;
+          }
+          if (i < lines.length) i++; // 閉じる ``` があれば飛ばす（無ければそのまま終了）
+          out.push("<pre><code>" + code.join("\n") + "</code></pre>");
+          continue;
+        }
+
+        // 空行はブロックの区切り。何もしない
+        if (line.trim() === "") { i++; continue; }
+
+        // 見出し # 〜 ######
+        const h = line.match(/^(#{1,6})\s+(.*)$/);
+        if (h) {
+          const level = h[1].length;
+          out.push(`<h${level}>${inline(h[2])}</h${level}>`);
+          i++;
+          continue;
+        }
+
+        // 水平線 --- / *** / ___
+        if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+          out.push("<hr>");
+          i++;
+          continue;
+        }
+
+        // 引用 > （続く行をまとめる）
+        if (/^\s*>\s?/.test(line)) {
+          const quote = [];
+          while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+            quote.push(inline(lines[i].replace(/^\s*>\s?/, "")));
+            i++;
+          }
+          out.push("<blockquote>" + quote.join("<br>") + "</blockquote>");
+          continue;
+        }
+
+        // 箇条書き - * +
+        if (/^\s*[-*+]\s+/.test(line)) {
+          const items = [];
+          while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) {
+            items.push("<li>" + inline(lines[i].replace(/^\s*[-*+]\s+/, "")) + "</li>");
+            i++;
+          }
+          out.push("<ul>" + items.join("") + "</ul>");
+          continue;
+        }
+
+        // 番号付きリスト 1. 2. 3.
+        if (/^\s*\d+\.\s+/.test(line)) {
+          const items = [];
+          while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
+            items.push("<li>" + inline(lines[i].replace(/^\s*\d+\.\s+/, "")) + "</li>");
+            i++;
+          }
+          out.push("<ol>" + items.join("") + "</ol>");
+          continue;
+        }
+
+        // それ以外は段落。空行か特殊行が来るまでをまとめる
+        const para = [];
+        while (
+          i < lines.length &&
+          lines[i].trim() !== "" &&
+          !/^\s*```/.test(lines[i]) &&
+          !/^(#{1,6})\s+/.test(lines[i]) &&
+          !/^(-{3,}|\*{3,}|_{3,})\s*$/.test(lines[i]) &&
+          !/^\s*>\s?/.test(lines[i]) &&
+          !/^\s*[-*+]\s+/.test(lines[i]) &&
+          !/^\s*\d+\.\s+/.test(lines[i])
+        ) {
+          para.push(inline(lines[i]));
+          i++;
+        }
+        if (para.length) out.push("<p>" + para.join("<br>") + "</p>");
+      }
+      return out.join("\n");
+    }
+
+    // ===== 画面とつなぐ =====
+    const inputEl   = document.getElementById("input");
+    const previewEl = document.getElementById("preview");
+    const sourceEl  = document.getElementById("htmlSource");
+    const toggleBtn = document.getElementById("toggleBtn");
+    const copyBtn   = document.getElementById("copyBtn");
+
+    function update() {
+      const html = mdToHtml(inputEl.value);
+      // 入力はescapeHtml済み・生成タグは限定・リンクURLも許可形式だけ<a>化しているので描画に使える
+      previewEl.innerHTML = html;
+      sourceEl.value = html;
+    }
+
+    inputEl.addEventListener("input", update);
+
+    // 「HTMLコードを表示／隠す」を切り替える
+    toggleBtn.addEventListener("click", () => {
+      const showing = sourceEl.style.display === "block";
+      sourceEl.style.display = showing ? "none" : "block";
+      toggleBtn.textContent = showing ? "HTMLコードを表示" : "HTMLコードを隠す";
+    });
+
+    // HTMLをクリップボードへコピー（使えない環境では手動コピー用に選択する）
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(sourceEl.value);
+        copyBtn.textContent = "コピーしました！";
+      } catch {
+        sourceEl.style.display = "block";
+        sourceEl.select();
+        copyBtn.textContent = "選択しました（手動でコピー）";
+      }
+      setTimeout(() => (copyBtn.textContent = "HTMLをコピー"), 1500);
+    });
+
+    // 最初に見本を表示しておく
+    inputEl.value = [
+      "# Markdown の見本",
+      "",
+      "これは **太字** と *斜体* と `コード` の例です。",
+      "",
+      "## リスト",
+      "- りんご",
+      "- ばなな",
+      "- みかん",
+      "",
+      "1. 最初に",
+      "2. 次に",
+      "3. 最後に",
+      "",
+      "> 引用です。`>` で書けます。",
+      "",
+      "[リンクの例](https://example.com)",
+      "",
+      "---",
+      "",
+      "```",
+      "コードブロックは <そのまま> 表示されます",
+      "```"
+    ].join("\n");
+    update();
+  </script>
+</body>
+</html>
