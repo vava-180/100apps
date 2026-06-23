@@ -88,7 +88,7 @@
 - [x] Day 056 表を PowerPoint スライドへ自動転記（Excel→PPT）
 - [x] Day 057 PowerPoint 目次スライド自動生成（PPT）
 - [x] Day 058 全スライドのフォント統一（PPT）
-- [ ] Day 059 画像を一括でスライド化（PPT）
+- [x] Day 059 画像を一括でスライド化（PPT）
 - [x] Day 060 スライドの文字を一括差し替え（PPT）
 - [x] Day 061 PPTファイルのMarkdown化：スライド内容をMarkdownに書き出し（PPT）
 
@@ -127,7 +127,7 @@
 - [x] Day 087 単語帳（フラッシュカード）
 - [x] Day 088 日記
 - [x] Day 089 多言語あいさつ
-- [ ] Day 090 ミニ電卓
+- [x] Day 090 ミニ電卓
 
 ---
 
