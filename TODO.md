@@ -82,7 +82,7 @@
 - [x] Day 052 ブック内ハイパーリンク目次（Excel）
 - [x] Day 053 CSV取り込み整形マクロ（Excel）
 - [x] Day 054 条件付き書式の一括設定（Excel）
-- [ ] Day 055 カレンダー自動生成（Excel）
+- [x] Day 055 カレンダー自動生成（Excel）
 
 ### PowerPoint（Day 56–61）
 - [ ] Day 056 表を PowerPoint スライドへ自動転記（Excel→PPT）
