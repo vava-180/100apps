@@ -134,7 +134,7 @@
 ## フェーズ5：自由選択（用途に最適な言語）  Day 91–100 … ※たたき台
 
 - [x] Day 091 数当てゲーム（number-guessing）
-- [ ] Day 092 タイピング練習
+- [x] Day 092 タイピング練習（typing-practice）
 - [ ] Day 093 画像加工ツール（Pillow）
 - [ ] Day 094 Markdown→HTML 変換サイト
 - [ ] Day 095 簡易API（FastAPI、ローカル）

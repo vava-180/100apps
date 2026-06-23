@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day 092 タイピング練習</title>
+  <style>
+    /* ===== 見た目（CSS）===== */
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background: #f3f4f6; color: #111827; margin: 0;
+      padding: 24px 16px; display: flex; justify-content: center;
+    }
+    .card {
+      background: #fff; width: 100%; max-width: 640px;
+      border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.08); padding: 24px;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 4px; }
+    .sub { color: #6b7280; font-size: .9rem; margin: 0 0 20px; }
+
+    /* タイプする文章の表示エリア（1文字ずつ色を変える） */
+    .target {
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 1.4rem; line-height: 1.9; letter-spacing: .5px;
+      background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px;
+      padding: 18px; min-height: 3em; word-break: break-all; user-select: none;
+    }
+    .target.focus { border-color: #4f46e5; }
+    .ch { color: #9ca3af; }                 /* まだ打っていない文字（グレー） */
+    .ch.done { color: #16a34a; }            /* 正しく打てた文字（緑） */
+    .ch.cur {                                /* 今打つべき文字（カーソル位置） */
+      background: #e0e7ff; color: #4f46e5; border-radius: 3px;
+    }
+    .ch.cur.err { background: #fee2e2; color: #ef4444; } /* 打ち間違えた瞬間（赤） */
+
+    .stats { display: flex; gap: 12px; margin: 18px 0; flex-wrap: wrap; }
+    .stat {
+      flex: 1; min-width: 110px; background: #f9fafb; border-radius: 10px;
+      padding: 12px; text-align: center;
+    }
+    .stat .num { font-size: 1.5rem; font-weight: 700; color: #4f46e5; }
+    .stat .label { font-size: .8rem; color: #6b7280; }
+
+    .controls { display: flex; gap: 8px; align-items: center; }
+    button {
+      cursor: pointer; border: none; border-radius: 10px; padding: 10px 18px;
+      font-size: 1rem; font-weight: 600; color: #fff; background: #4f46e5;
+    }
+    button:hover { opacity: .92; }
+    .hint { color: #6b7280; font-size: .9rem; }
+    .footer { margin-top: 24px; text-align: center; color: #9ca3af; font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>⌨️ タイピング練習</h1>
+    <p class="sub">表示された英文をタイプしよう。正しいキーを押すと次の文字へ進みます（IME＝日本語入力はオフに）。</p>
+
+    <!-- tabindex でクリックすると入力を受け取れるようにする -->
+    <div class="target" id="target" tabindex="0">スタートを押して始めてください</div>
+
+    <div class="stats">
+      <div class="stat"><div class="num" id="cpm">0</div><div class="label">CPM（1分あたり文字数）</div></div>
+      <div class="stat"><div class="num" id="acc">100%</div><div class="label">正確率</div></div>
+      <div class="stat"><div class="num" id="time">0.0</div><div class="label">経過秒</div></div>
+      <div class="stat"><div class="num" id="progress">0 / 0</div><div class="label">問題数</div></div>
+    </div>
+
+    <div class="controls">
+      <button id="startBtn">スタート</button>
+      <span class="hint" id="hint">全 <span id="totalQ">0</span> 問。ミスは正確率に反映されます。</span>
+    </div>
+
+    <p class="footer">100日100アプリチャレンジ Day 092 / 100</p>
+  </div>
+
+  <script>
+    // ===== ロジック（JavaScript）=====
+
+    // 練習用の文章（英数字・記号のみ＝IMEなしで打てるもの）
+    const SENTENCES = [
+      "The quick brown fox jumps over the lazy dog.",
+      "Practice makes perfect, so keep typing every day.",
+      "Hello world! This is a simple typing test.",
+      "Coding is fun when you build small apps daily.",
+      "Stay calm and type each key carefully and fast."
+    ];
+
+    // 画面の部品を取得
+    const targetEl   = document.getElementById("target");
+    const cpmEl      = document.getElementById("cpm");
+    const accEl      = document.getElementById("acc");
+    const timeEl     = document.getElementById("time");
+    const progressEl = document.getElementById("progress");
+    const startBtn   = document.getElementById("startBtn");
+    const totalQEl   = document.getElementById("totalQ");
+
+    // ゲームの状態
+    let queue = [];            // 出題する文章の順番（シャッフル後）
+    let qIndex = 0;            // 今が何問目か
+    let target = "";           // 今の文章
+    let typedLen = 0;          // 今の文章で正しく打てた文字数
+    let lastWasError = false;  // 直前のキーが間違いだったか（赤表示用）
+
+    let totalCorrect = 0;      // セッション全体で正しく打てたキー数
+    let totalError = 0;        // セッション全体で打ち間違えたキー数
+    let startTime = null;      // タイマー開始時刻（null = まだ開始していない）
+    let timerId = null;        // 経過時間の更新タイマー
+    let running = false;       // ゲーム中かどうか
+
+    totalQEl.textContent = SENTENCES.length;
+
+    // 配列をシャッフルする（フィッシャー・イェーツ法）
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    // 今の文章を1文字ずつ span にして表示する（位置で色分け）
+    function render() {
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < target.length; i++) {
+        const span = document.createElement("span");
+        span.className = "ch";
+        span.textContent = target[i];
+        if (i < typedLen) {
+          span.classList.add("done");                 // 打ち終えた文字
+        } else if (i === typedLen) {
+          span.classList.add("cur");                   // 今打つ文字
+          if (lastWasError) span.classList.add("err"); // 直前に間違えた
+        }
+        frag.appendChild(span);
+      }
+      targetEl.replaceChildren(frag);
+    }
+
+    // 統計の表示を更新する
+    function updateStats() {
+      const elapsed = startTime !== null ? (Date.now() - startTime) / 1000 : 0;
+      timeEl.textContent = elapsed.toFixed(1);
+      // CPM = 正しく打てた文字数 ÷ 経過分。打ち始める前は 0。
+      const cpm = elapsed > 0 ? Math.round(totalCorrect / (elapsed / 60)) : 0;
+      cpmEl.textContent = cpm;
+      const totalKeys = totalCorrect + totalError;
+      const acc = totalKeys > 0 ? Math.round((totalCorrect / totalKeys) * 100) : 100;
+      accEl.textContent = acc + "%";
+      // 「今が何問目か」を表示する（プレイ中は1始まり、未開始は0）
+      const currentNo = running ? Math.min(qIndex + 1, queue.length) : qIndex;
+      progressEl.textContent = currentNo + " / " + queue.length;
+    }
+
+    // 新しい問題（文章）を1つ出す。なければ終了。
+    function nextSentence() {
+      if (qIndex >= queue.length) { finish(); return; }
+      target = queue[qIndex];
+      typedLen = 0;
+      lastWasError = false;
+      render();
+      updateStats();
+    }
+
+    // ゲーム開始
+    function start() {
+      queue = shuffle(SENTENCES.filter(s => s.length > 0)); // 空の文章は除く
+      qIndex = 0;
+      totalCorrect = 0;
+      totalError = 0;
+      startTime = null;        // 最初のキーが押されたら計測開始
+      running = true;
+      startBtn.textContent = "やり直す";
+      if (timerId) clearInterval(timerId);
+      timerId = setInterval(updateStats, 100); // 0.1秒ごとに時間表示を更新
+      nextSentence();
+      targetEl.focus();
+    }
+
+    // ゲーム終了
+    function finish() {
+      running = false;
+      if (timerId) { clearInterval(timerId); timerId = null; }
+      updateStats();
+      const elapsed = startTime !== null ? (Date.now() - startTime) / 1000 : 0;
+      targetEl.textContent =
+        "🎉 おつかれさま！ " + queue.length + " 問クリア（" +
+        elapsed.toFixed(1) + "秒 / 正確率 " + accEl.textContent + "）";
+      startBtn.textContent = "もう一度";
+    }
+
+    // キーが押されたときの処理（タイピングの本体）
+    function onKeyDown(e) {
+      if (!running) return;
+      // 日本語入力（IME）の変換中は数えない＝正確率が壊れないようにする
+      if (e.isComposing || e.key === "Dead" || e.key === "Process") return;
+      // キーの長押しによる連続入力は無視する（1打鍵＝1回に保つ）
+      if (e.repeat) { e.preventDefault(); return; }
+
+      // Backspace は今の1文字をやり直せる。正解として数えた分も一緒に戻す
+      if (e.key === "Backspace") {
+        if (typedLen > 0) {
+          typedLen--;
+          totalCorrect = Math.max(0, totalCorrect - 1); // CPM/正確率の水増しを防ぐ
+          lastWasError = false;
+          render();
+          updateStats();
+        }
+        e.preventDefault();
+        return;
+      }
+      // 1文字のキーだけを対象（Shift や矢印などは無視）
+      if (e.key.length !== 1) return;
+      e.preventDefault();
+
+      // 最初の有効なキーでタイマーを開始（null = まだ開始していない）
+      if (startTime === null) startTime = Date.now();
+
+      const expected = target[typedLen];
+      if (e.key === expected) {
+        // 正解：次の文字へ
+        typedLen++;
+        totalCorrect++;
+        lastWasError = false;
+        if (typedLen === target.length) {
+          // 文章を打ち終えた → 次の問題へ
+          qIndex++;
+          render();
+          updateStats();
+          nextSentence();
+          return;
+        }
+      } else {
+        // 不正解：進めずに記録し、赤く表示
+        totalError++;
+        lastWasError = true;
+      }
+      render();
+      updateStats();
+    }
+
+    // ===== 操作をつなぐ =====
+    startBtn.addEventListener("click", start);
+    targetEl.addEventListener("keydown", onKeyDown);
+    // 表示エリアにフォーカスが当たっているか分かるよう枠の色を変える
+    targetEl.addEventListener("focus", () => targetEl.classList.add("focus"));
+    targetEl.addEventListener("blur", () => targetEl.classList.remove("focus"));
+  </script>
+</body>
+</html>
