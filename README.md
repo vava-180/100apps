@@ -146,4 +146,7 @@ Day 048〜059 は並行して制作中。
 | 093 | 画像加工ツール（Pillow） | ✅ | [image_editor.py](day093-image-editor/image_editor.py) |
 | 094 | Markdown→HTML 変換 | ✅ | [index.html](day094-markdown-to-html/index.html) |
 | 095 | 簡易メモ帳API（FastAPI） | ✅ | [main.py](day095-fastapi-memo/main.py) |
+| 096 | ポートフォリオサイト | ✅ | [index.html](day096-portfolio/index.html) |
+| 097 | 100apps記録サイト（一覧自動生成） | ✅ | [generate_site.py](day097-100apps-index/generate_site.py) |
+| 098 | ミニ機械学習デモ（線形回帰） | ✅ | [linear_regression.py](day098-ml-linear-regression/linear_regression.py) |
 
