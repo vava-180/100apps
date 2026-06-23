@@ -1,0 +1,20 @@
+name: day081_qrcode
+description: "100apps Day081 QRコード表示（Flutter）"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # QRコードを描くためのパッケージ（オフラインで動作・ネット通信なし）。
+  qr_flutter: ^4.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
