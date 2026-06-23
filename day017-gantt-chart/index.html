@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ガントチャート作成</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+    --day-w: 34px;   /* 1日ぶんの横幅 */
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 20px; }
+
+  /* 入力フォーム */
+  .form {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 20px;
+  }
+  .form .f { display: flex; flex-direction: column; gap: 4px; }
+  .form label { font-size: 0.76rem; color: var(--sub); }
+  .form input {
+    padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit;
+    font-size: 0.9rem; outline: none;
+  }
+  .form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .form input[type="text"] { min-width: 200px; }
+  .form button {
+    border: none; background: var(--accent); color: #fff; border-radius: 8px; padding: 10px 20px;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .form button:hover { opacity: .92; }
+  .err { color: #c0392b; font-size: 0.82rem; width: 100%; min-height: 0; }
+
+  /* チャート */
+  .chart-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .chart-scroll { overflow-x: auto; }
+  .empty { padding: 50px 20px; text-align: center; color: var(--sub); }
+  .grid-head { display: flex; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+  .name-col {
+    width: 180px; min-width: 180px; padding: 8px 12px; font-size: 0.8rem; color: var(--sub);
+    background: #f7f8fa; border-right: 1px solid var(--border); display: flex; align-items: center;
+  }
+  .days { display: flex; }
+  .day {
+    width: var(--day-w); min-width: var(--day-w); text-align: center; font-size: 0.68rem; color: var(--sub);
+    padding: 4px 0; border-right: 1px solid #eef0f3;
+  }
+  .day .wd { font-size: 0.62rem; }
+  .day.sat { background: #eef4ff; }
+  .day.sun { background: #fdeef0; }
+  .day .mon { color: var(--text); font-weight: 700; }
+
+  .row { display: flex; border-bottom: 1px solid #eef0f3; }
+  .row:hover { background: #fafbfd; }
+  .row .name-col { background: #fff; color: var(--text); font-size: 0.88rem; justify-content: space-between; gap: 6px; }
+  .row .name-col .del { color: var(--sub); cursor: pointer; border: none; background: none; font-size: 1rem; padding: 0 2px; }
+  .row .name-col .del:hover { color: #c0392b; }
+  .track { position: relative; height: 38px; }
+  .track .cell { width: var(--day-w); min-width: var(--day-w); height: 100%; border-right: 1px solid #eef0f3; display: inline-block; }
+  .track .cell.sat { background: #eef4ff; }
+  .track .cell.sun { background: #fdeef0; }
+  .bar {
+    position: absolute; top: 7px; height: 24px; border-radius: 6px; color: #fff;
+    font-size: 0.72rem; line-height: 24px; padding: 0 8px; white-space: nowrap; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.12);
+  }
+  .today-line { position: absolute; top: 0; width: 2px; background: #e74c3c; z-index: 2; }
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>ガントチャート作成</h1>
+    <p class="lead">タスク名と開始日・終了日を入れると、横棒の予定表（ガントチャート）を作ります。データはこのブラウザに保存されます（ネット通信なし）。</p>
+
+    <div class="form">
+      <div class="f"><label>タスク名</label><input type="text" id="name" placeholder="例：企画書づくり"></div>
+      <div class="f"><label>開始日</label><input type="date" id="start"></div>
+      <div class="f"><label>終了日</label><input type="date" id="end"></div>
+      <button id="add">追加</button>
+      <div class="err" id="err"></div>
+    </div>
+
+    <div class="chart-box">
+      <div class="chart-scroll" id="scroll">
+        <div class="empty" id="empty">タスクを追加すると、ここにガントチャートが表示されます。</div>
+        <div id="chart"></div>
+      </div>
+    </div>
+
+    <footer>Day 17 / 100 — Gantt Chart</footer>
+  </div>
+
+<script>
+  const el = id => document.getElementById(id);
+  const COLORS = ['#4f7cff', '#1d8a4f', '#e67e22', '#9b59b6', '#16a085', '#e74c3c', '#2c80b4'];
+  const STORAGE_KEY = 'day017-gantt-tasks';
+
+  // タスク一覧（保存データは下のほうの load() で読み込む）
+  let tasks = [];
+
+  // ---- 日付のユーティリティ ----
+  // "2026-06-23" → Dateオブジェクト（時刻ズレを避けるため正午で作る）
+  function toDate(str) { const [y, m, d] = str.split('-').map(Number); return new Date(y, m - 1, d, 12); }
+  // 2つの日付の差（日数）
+  function dayDiff(a, b) { return Math.round((b - a) / 86400000); }
+  // 日付に n日 足した新しい日付
+  function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
+  const pad = n => String(n).padStart(2, '0');
+
+  // "2026-06-23" のような正しい日付文字列か確認する（2026-02-31 のような存在しない日も弾く）
+  function isValidDateString(s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = toDate(s);
+    return !Number.isNaN(d.getTime()) &&
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` === s;
+  }
+
+  // ---- 保存・読み込み（localStorage）----
+  function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
+  function load() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (!Array.isArray(parsed)) return [];
+      // 壊れた保存データで描画が落ちないよう、正しいものだけ通す
+      return parsed
+        .filter(t => t && typeof t.name === 'string' &&
+          isValidDateString(t.start) && isValidDateString(t.end) &&
+          toDate(t.end) >= toDate(t.start))
+        .map((t, i) => ({
+          name: t.name,
+          start: t.start,
+          end: t.end,
+          // 色も用意した一覧のものだけ採用（変なCSSが入らないように）
+          color: COLORS.includes(t.color) ? t.color : COLORS[i % COLORS.length]
+        }));
+    } catch { return []; }
+  }
+
+  // ---- 追加 ----
+  el('add').addEventListener('click', () => {
+    const name = el('name').value.trim();
+    const start = el('start').value;
+    const end = el('end').value;
+    el('err').textContent = '';
+
+    if (!name) { el('err').textContent = 'タスク名を入力してください。'; return; }
+    if (!start || !end) { el('err').textContent = '開始日と終了日を選んでください。'; return; }
+    if (toDate(end) < toDate(start)) { el('err').textContent = '終了日は開始日より後（または同じ日）にしてください。'; return; }
+
+    tasks.push({ name, start, end, color: COLORS[tasks.length % COLORS.length] });
+    save();
+    el('name').value = '';
+    render();
+  });
+
+  // ---- 削除 ----
+  function removeTask(index) { tasks.splice(index, 1); save(); render(); }
+
+  // ---- 描画 ----
+  function render() {
+    const chart = el('chart');
+    if (tasks.length === 0) {
+      el('empty').style.display = 'block';
+      el('empty').textContent = 'タスクを追加すると、ここにガントチャートが表示されます。';
+      chart.innerHTML = '';
+      return;
+    }
+    el('empty').style.display = 'none';
+
+    // 全タスクの最も早い開始日・最も遅い終了日を求め、その範囲を表示する
+    let min = toDate(tasks[0].start), max = toDate(tasks[0].end);
+    tasks.forEach(t => {
+      const s = toDate(t.start), e = toDate(t.end);
+      if (s < min) min = s;
+      if (e > max) max = e;
+    });
+    // 前後に1日ずつ余白を持たせると見やすい
+    min = addDays(min, -1);
+    max = addDays(max, 1);
+    const totalDays = dayDiff(min, max) + 1;
+
+    // 期間が長すぎると大量のマス目で固まるので、1年までに制限する
+    if (totalDays > 366) {
+      el('empty').style.display = 'block';
+      el('empty').textContent = '表示できる期間は最大1年までです。期間の長いタスクを見直してください。';
+      chart.innerHTML = '';
+      return;
+    }
+
+    const WD = ['日', '月', '火', '水', '木', '金', '土'];
+    const dayWidth = 34;
+
+    // 日付ヘッダー
+    let head = '<div class="grid-head"><div class="name-col">タスク</div><div class="days">';
+    for (let i = 0; i < totalDays; i++) {
+      const d = addDays(min, i);
+      const dow = d.getDay();
+      const cls = dow === 0 ? ' sun' : dow === 6 ? ' sat' : '';
+      const monthMark = (d.getDate() === 1 || i === 0) ? `<span class="mon">${d.getMonth() + 1}/${d.getDate()}</span>` : d.getDate();
+      head += `<div class="day${cls}">${monthMark}<br><span class="wd">${WD[dow]}</span></div>`;
+    }
+    head += '</div></div>';
+
+    // 各タスクの行
+    let rows = '';
+    tasks.forEach((t, idx) => {
+      const offset = dayDiff(min, toDate(t.start));        // 何日目から始まるか
+      const span = dayDiff(toDate(t.start), toDate(t.end)) + 1; // 何日間か
+      // 背景の日セル（土日に色を付ける）
+      let cells = '';
+      for (let i = 0; i < totalDays; i++) {
+        const dow = addDays(min, i).getDay();
+        const cls = dow === 0 ? ' sun' : dow === 6 ? ' sat' : '';
+        cells += `<span class="cell${cls}"></span>`;
+      }
+      const left = offset * dayWidth;
+      const width = span * dayWidth - 4;
+      const label = `${t.name}（${span}日）`;
+      rows += `
+        <div class="row">
+          <div class="name-col"><span>${escapeHtml(t.name)}</span><button class="del" data-i="${idx}" title="削除">×</button></div>
+          <div class="track" style="width:${totalDays * dayWidth}px">
+            ${cells}
+            <div class="bar" style="left:${left}px;width:${width}px;background:${t.color}">${escapeHtml(label)}</div>
+          </div>
+        </div>`;
+    });
+
+    chart.innerHTML = head + rows;
+
+    // 今日の赤い線（表示範囲に入っていれば）
+    const today = toDate(`${new Date().getFullYear()}-${pad(new Date().getMonth() + 1)}-${pad(new Date().getDate())}`);
+    const todayOffset = dayDiff(min, today);
+    if (todayOffset >= 0 && todayOffset < totalDays) {
+      chart.querySelectorAll('.track').forEach(track => {
+        const line = document.createElement('div');
+        line.className = 'today-line';
+        line.style.left = (todayOffset * dayWidth + dayWidth / 2) + 'px';
+        line.style.height = '100%';
+        track.appendChild(line);
+      });
+    }
+
+    // 削除ボタン
+    chart.querySelectorAll('.del').forEach(b => b.addEventListener('click', () => removeTask(+b.dataset.i)));
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // 初期値：開始日に今日を入れておく
+  const todayStr = `${new Date().getFullYear()}-${pad(new Date().getMonth() + 1)}-${pad(new Date().getDate())}`;
+  el('start').value = todayStr;
+  el('end').value = todayStr;
+
+  // 保存データを読み込んでから最初の描画（pad/toDate が定義済みのここで行う）
+  tasks = load();
+  render();
+</script>
+</body>
+</html>

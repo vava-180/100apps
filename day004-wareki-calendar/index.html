@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>西暦↔和暦＆営業日計算</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px; margin-bottom: 22px;
+  }
+  .card h2 { font-size: 1.05rem; margin: 0 0 14px; }
+  label { display: block; font-size: 0.8rem; color: var(--sub); margin-bottom: 6px; }
+  input[type="date"], input[type="number"] {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--border);
+    border-radius: 10px; font-size: 1rem; font-family: inherit; color: var(--text);
+    background: #fff; outline: none;
+  }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .out {
+    margin-top: 14px; padding: 14px 16px; background: #f3f6ff;
+    border-radius: 10px; font-size: 1.05rem; font-weight: 600; color: #34406b;
+  }
+  .out small { display: block; font-weight: 500; color: var(--sub); font-size: 0.8rem; margin-top: 4px; }
+  .muted { color: var(--sub); font-size: 0.85rem; margin-top: 10px; }
+  footer { margin-top: 6px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+  @media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>西暦↔和暦＆営業日計算</h1>
+    <p class="lead">日付を選ぶと和暦に変換し、土日を除いた営業日も計算します。</p>
+
+    <div class="card">
+      <h2>📅 西暦 → 和暦</h2>
+      <label for="dateInput">日付を選ぶ</label>
+      <input type="date" id="dateInput">
+      <div class="out" id="warekiOut">日付を選んでください</div>
+    </div>
+
+    <div class="card">
+      <h2>🗓 営業日を計算</h2>
+      <div class="grid2">
+        <div>
+          <label for="startDate">起点の日付</label>
+          <input type="date" id="startDate">
+        </div>
+        <div>
+          <label for="days">何営業日後？（マイナスで前）</label>
+          <input type="number" id="days" value="5" step="1">
+        </div>
+      </div>
+      <div class="out" id="bizOut">起点と日数を入力してください</div>
+      <p class="muted">※ 土曜・日曜を除いて数えます（祝日は含みません）。</p>
+    </div>
+
+    <div class="card">
+      <h2>⏱ 2つの日付の間の日数</h2>
+      <div class="grid2">
+        <div>
+          <label for="dateA">日付A</label>
+          <input type="date" id="dateA">
+        </div>
+        <div>
+          <label for="dateB">日付B</label>
+          <input type="date" id="dateB">
+        </div>
+      </div>
+      <div class="out" id="diffOut">2つの日付を入力してください</div>
+    </div>
+
+    <footer>Day 4 / 100 — Wareki & Business Day Calculator</footer>
+  </div>
+
+<script>
+  // 元号の開始日（この日からその元号）。新しい順に並べる
+  const eras = [
+    { name: '令和', start: new Date(2019, 4, 1) },  // 2019-05-01
+    { name: '平成', start: new Date(1989, 0, 8) },  // 1989-01-08
+    { name: '昭和', start: new Date(1926, 11, 25) },// 1926-12-25
+    { name: '大正', start: new Date(1912, 6, 30) }, // 1912-07-30
+    { name: '明治', start: new Date(1868, 0, 25) }, // 1868-01-25
+  ];
+
+  // 西暦の日付を「令和○年」のような和暦文字列にする
+  function toWareki(date) {
+    for (const era of eras) {
+      if (date >= era.start) {
+        // その元号の中で何年目か（開始年を1年目とする）
+        const year = date.getFullYear() - era.start.getFullYear() + 1;
+        const label = year === 1 ? '元' : year;
+        return `${era.name}${label}年${date.getMonth() + 1}月${date.getDate()}日`;
+      }
+    }
+    return '明治より前は対応していません';
+  }
+
+  document.getElementById('dateInput').addEventListener('change', e => {
+    const out = document.getElementById('warekiOut');
+    if (!e.target.value) { out.textContent = '日付を選んでください'; return; }
+    const d = new Date(e.target.value + 'T00:00:00');
+    out.innerHTML = `${toWareki(d)}<small>西暦 ${e.target.value}</small>`;
+  });
+
+  // 営業日（土日を除く）を起点から前後に数える
+  function addBusinessDays(start, count) {
+    const d = new Date(start);
+    let remaining = Math.abs(count);
+    const step = count >= 0 ? 1 : -1;
+    while (remaining > 0) {
+      d.setDate(d.getDate() + step);
+      const day = d.getDay(); // 0=日曜, 6=土曜
+      if (day !== 0 && day !== 6) remaining--;
+    }
+    return d;
+  }
+
+  function updateBiz() {
+    const start = document.getElementById('startDate').value;
+    const days = parseInt(document.getElementById('days').value, 10);
+    const out = document.getElementById('bizOut');
+    if (!start || isNaN(days)) { out.textContent = '起点と日数を入力してください'; return; }
+    const result = addBusinessDays(new Date(start + 'T00:00:00'), days);
+    const ymd = `${result.getFullYear()}-${String(result.getMonth()+1).padStart(2,'0')}-${String(result.getDate()).padStart(2,'0')}`;
+    const week = ['日','月','火','水','木','金','土'][result.getDay()];
+    out.innerHTML = `${ymd}（${week}）<small>${days >= 0 ? days + '営業日後' : (-days) + '営業日前'} ／ ${toWareki(result)}</small>`;
+  }
+  document.getElementById('startDate').addEventListener('change', updateBiz);
+  document.getElementById('days').addEventListener('input', updateBiz);
+
+  // 2つの日付の差（日数）を計算する
+  function updateDiff() {
+    const a = document.getElementById('dateA').value;
+    const b = document.getElementById('dateB').value;
+    const out = document.getElementById('diffOut');
+    if (!a || !b) { out.textContent = '2つの日付を入力してください'; return; }
+    // 夏時間（サマータイム）の影響を受けないように、UTCの日付値で差を取る
+    const [ay, am, ad] = a.split('-').map(Number);
+    const [by, bm, bd] = b.split('-').map(Number);
+    // ミリ秒の差を「1日 = 86400000ミリ秒」で割る
+    const diff = Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
+    out.innerHTML = `${Math.abs(diff)} 日<small>${diff === 0 ? '同じ日' : (diff > 0 ? 'AよりBが後' : 'AよりBが前')}</small>`;
+  }
+  document.getElementById('dateA').addEventListener('change', updateDiff);
+  document.getElementById('dateB').addEventListener('change', updateDiff);
+
+  // 起点の初期値として今日を入れておく
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  document.getElementById('startDate').value = todayStr;
+  updateBiz();
+</script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>議事録ジェネレータ</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  label { display: block; font-size: 0.8rem; color: var(--sub); margin: 12px 0 5px; }
+  label:first-of-type { margin-top: 0; }
+  input[type="text"], input[type="date"], textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 10px; font-size: 0.95rem; font-family: inherit; color: var(--text);
+    background: #fff; outline: none;
+  }
+  textarea { resize: vertical; line-height: 1.7; }
+  input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .hint { font-size: 0.72rem; color: var(--sub); margin-top: 4px; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .panel-head h2 { font-size: 1rem; margin: 0; }
+  .copy { border: none; background: #eceef2; color: var(--text); border-radius: 8px; padding: 7px 14px; font-size: 0.8rem; cursor: pointer; font-family: inherit; }
+  .copy:hover { opacity: .9; }
+  pre.out {
+    margin: 0; padding: 16px; background: #fbfcfe; border: 1px solid var(--border);
+    border-radius: 10px; white-space: pre-wrap; word-break: break-word;
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 0.85rem; line-height: 1.65;
+    min-height: 420px;
+  }
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+  @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } pre.out { min-height: 260px; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>議事録ジェネレータ</h1>
+    <p class="lead">項目を埋めるだけで、きれいな議事録のテキストを自動で組み立てます。Markdown形式でそのまま貼り付けOK。</p>
+
+    <div class="cols">
+      <div class="panel">
+        <label>会議名</label>
+        <input type="text" id="title" placeholder="例）週次定例ミーティング">
+
+        <label>日付</label>
+        <input type="date" id="date">
+
+        <label>場所</label>
+        <input type="text" id="place" placeholder="例）会議室A ／ オンライン">
+
+        <label>参加者（カンマ区切り）</label>
+        <input type="text" id="members" placeholder="例）山田, 鈴木, 田中">
+
+        <label>議題・決定事項（1行に1つ）</label>
+        <textarea id="agenda" rows="5" placeholder="例）&#10;来月の予算を承認&#10;新メンバーの歓迎会は来週金曜"></textarea>
+
+        <label>ToDo（「担当: 内容」の形で1行に1つ）</label>
+        <textarea id="todos" rows="4" placeholder="例）&#10;山田: 資料を木曜までに共有&#10;鈴木: 見積もりを再依頼"></textarea>
+
+        <label>備考</label>
+        <textarea id="note" rows="2" placeholder="補足があれば…"></textarea>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>プレビュー（Markdown）</h2>
+          <button class="copy" id="copy">コピー</button>
+        </div>
+        <pre class="out" id="output"></pre>
+        <p class="hint">左を編集するとリアルタイムで更新されます。</p>
+      </div>
+    </div>
+
+    <footer>Day 5 / 100 — Meeting Minutes Generator</footer>
+  </div>
+
+<script>
+  const ids = ['title','date','place','members','agenda','todos','note'];
+  const el = {};
+  ids.forEach(id => el[id] = document.getElementById(id));
+  const output = document.getElementById('output');
+
+  // 改行で区切られた入力を「中身のある行」だけの配列にする
+  function lines(text) {
+    return text.split('\n').map(s => s.trim()).filter(s => s !== '');
+  }
+
+  // 入力内容から議事録のMarkdownテキストを組み立てる
+  function build() {
+    const title = el.title.value.trim() || '（会議名）';
+    const date = el.date.value || '----/--/--';
+    const place = el.place.value.trim() || '-';
+    const members = el.members.value.split(',').map(s => s.trim()).filter(s => s);
+
+    let md = `# ${title} 議事録\n\n`;
+    md += `- 日時：${date}\n`;
+    md += `- 場所：${place}\n`;
+    md += `- 参加者：${members.length ? members.join('、') : '-'}\n\n`;
+
+    md += `## 議題・決定事項\n`;
+    const agenda = lines(el.agenda.value);
+    md += agenda.length ? agenda.map((a, i) => `${i + 1}. ${a}`).join('\n') : '-';
+    md += `\n\n`;
+
+    md += `## ToDo\n`;
+    const todos = lines(el.todos.value);
+    if (todos.length) {
+      md += todos.map(t => {
+        // 「担当: 内容」の形なら担当を太字にする
+        const m = t.match(/^(.+?)[:：]\s*(.+)$/);
+        return m ? `- [ ] **${m[1].trim()}** — ${m[2].trim()}` : `- [ ] ${t}`;
+      }).join('\n');
+    } else {
+      md += '-';
+    }
+    md += `\n\n`;
+
+    const note = el.note.value.trim();
+    if (note) md += `## 備考\n${note}\n`;
+
+    return md;
+  }
+
+  function update() { output.textContent = build(); }
+  ids.forEach(id => el[id].addEventListener('input', update));
+
+  document.getElementById('copy').addEventListener('click', async () => {
+    await navigator.clipboard.writeText(output.textContent);
+    const btn = document.getElementById('copy');
+    btn.textContent = 'コピーしました';
+    setTimeout(() => btn.textContent = 'コピー', 1200);
+  });
+
+  // 初期表示として今日の日付を入れておく
+  const t = new Date();
+  el.date.value = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  update();
+</script>
+</body>
+</html>

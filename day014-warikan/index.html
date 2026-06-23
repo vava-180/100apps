@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>割り勘計算機</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+  .field { margin-bottom: 18px; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+  .with-unit { position: relative; }
+  .with-unit input {
+    width: 100%; padding: 12px 40px 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 1.1rem; font-family: inherit; outline: none;
+  }
+  .with-unit .unit { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--sub); font-size: 0.9rem; }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .seg { display: flex; gap: 8px; }
+  .seg button {
+    flex: 1; border: 1px solid var(--border); background: #fff; color: var(--sub);
+    border-radius: 10px; padding: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .seg button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .out { margin-top: 6px; }
+  .big {
+    text-align: center; background: #f3f6ff; border-radius: 12px; padding: 20px; margin-bottom: 14px;
+  }
+  .big .yen { font-size: 2.2rem; font-weight: 800; color: var(--accent); }
+  .big .per { font-size: 0.85rem; color: var(--sub); }
+  .rows { font-size: 0.92rem; }
+  .rows .r { display: flex; justify-content: space-between; padding: 8px 2px; border-bottom: 1px solid var(--border); }
+  .rows .r:last-child { border-bottom: none; }
+  .rows .r .v { font-weight: 700; }
+  .note { font-size: 0.82rem; color: var(--sub); margin-top: 12px; }
+  .hl { color: var(--accent); font-weight: 700; }
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>割り勘計算機</h1>
+    <p class="lead">合計金額と人数から、1人いくらかを計算します。端数の寄せ方も選べます（ネット通信なし）。</p>
+
+    <div class="card">
+      <div class="field">
+        <label>合計金額</label>
+        <div class="with-unit"><input type="number" id="total" min="0" step="1" placeholder="例：12000"><span class="unit">円</span></div>
+      </div>
+      <div class="field">
+        <label>人数</label>
+        <div class="with-unit"><input type="number" id="people" min="1" step="1" value="4"><span class="unit">人</span></div>
+      </div>
+      <div class="field">
+        <label>1人あたりの丸め方</label>
+        <div class="seg" id="roundSeg">
+          <button data-mode="ceil100" class="active">100円単位で多め</button>
+          <button data-mode="ceil10">10円単位で多め</button>
+          <button data-mode="none">きっちり（端数あり）</button>
+        </div>
+      </div>
+
+      <div class="out" id="out"></div>
+    </div>
+
+    <footer>Day 14 / 100 — Warikan (Bill Splitter)</footer>
+  </div>
+
+<script>
+  const el = id => document.getElementById(id);
+  let roundMode = 'ceil100';
+
+  const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
+
+  // 1人あたりの金額を、選んだ丸め方で計算する
+  // ※ 多めに丸めると、集めた合計が請求額を上回る（余りが出る）
+  function perPerson(exact, mode) {
+    if (mode === 'ceil100') return Math.ceil(exact / 100) * 100; // 100円単位で切り上げ
+    if (mode === 'ceil10')  return Math.ceil(exact / 10) * 10;   // 10円単位で切り上げ
+    return exact; // きっちり（割り切れないと端数が残る）
+  }
+
+  function calc() {
+    const totalRaw = el('total').value.trim();
+    const peopleRaw = el('people').value.trim();
+    const total = Number(totalRaw);
+    const people = Number(peopleRaw);
+
+    // 入力チェック（初心者にも分かるよう、理由を分けて伝える）
+    if (totalRaw === '' || isNaN(total)) { el('out').innerHTML = msg('合計金額を入力してください。'); return; }
+    if (!Number.isInteger(total) || total <= 0) { el('out').innerHTML = msg('合計金額は1円以上の整数で入力してください。'); return; }
+    if (!Number.isSafeInteger(total)) { el('out').innerHTML = msg('金額が大きすぎます。'); return; }
+    if (peopleRaw === '' || isNaN(people)) { el('out').innerHTML = msg('人数を入力してください。'); return; }
+    if (!Number.isInteger(people) || people < 1) { el('out').innerHTML = msg('人数は1人以上の整数で入力してください。'); return; }
+
+    const exact = total / people; // きっちり割った1人分（割り切れないと小数）
+
+    if (roundMode === 'none') {
+      // きっちりモード: 1円単位で合計がちょうど合うように、2グループに分ける
+      const floorEach = Math.floor(exact);
+      const remainder = total - floorEach * people; // この人数だけ +1円 多く払う
+      // メインの大きな表示は「目安」（割り切れないときは小数で出す）
+      const bigText = Number.isInteger(exact) ? yen(exact) : `¥${exact.toFixed(2)}`;
+      let html = `
+        <div class="big">
+          <div class="yen">${bigText}</div>
+          <div class="per">1人あたり（きっちり ${people}人で割り勘）</div>
+        </div>
+        <div class="rows">
+          <div class="r"><span>請求額の合計</span><span class="v">${yen(total)}</span></div>`;
+      if (remainder === 0) {
+        html += `</div><div class="note">ぴったり割り切れます。全員 <span class="hl">${yen(floorEach)}</span> です。</div>`;
+      } else {
+        html += `
+          <div class="r"><span>${remainder}人 が…</span><span class="v">${yen(floorEach + 1)}</span></div>
+          <div class="r"><span>${people - remainder}人 が…</span><span class="v">${yen(floorEach)}</span></div>
+        </div>
+        <div class="note"><span class="hl">${remainder}人が${yen(floorEach + 1)}・${people - remainder}人が${yen(floorEach)}</span>
+        にすると、合計がちょうど ${yen(total)} になります。</div>`;
+      }
+      el('out').innerHTML = html;
+      return;
+    }
+
+    // 切り上げモード: 1人分を多めに丸める（その分、集めた合計が余る）
+    const each = perPerson(exact, roundMode); // 整数になる
+    const collected = each * people;
+    const diff = collected - total;
+    let html = `
+      <div class="big">
+        <div class="yen">${yen(each)}</div>
+        <div class="per">1人あたり（${people}人で割り勘）</div>
+      </div>
+      <div class="rows">
+        <div class="r"><span>請求額の合計</span><span class="v">${yen(total)}</span></div>
+        <div class="r"><span>集まる合計（1人 ${yen(each)} × ${people}人）</span><span class="v">${yen(collected)}</span></div>
+      </div>`;
+    html += diff === 0
+      ? `<div class="note">ぴったりです。余りは出ません。</div>`
+      : `<div class="note">多めに集めると <span class="hl">${yen(diff)}</span> 余ります。
+         幹事のぶんを少なくしたり、チップ・次回くりこしに使えます。</div>`;
+    el('out').innerHTML = html;
+  }
+
+  function msg(text) { return `<div class="note" style="text-align:center;padding:18px 0;">${text}</div>`; }
+
+  // 丸め方ボタンの切り替え
+  el('roundSeg').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    roundMode = btn.dataset.mode;
+    el('roundSeg').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+    calc();
+  });
+
+  el('total').addEventListener('input', calc);
+  el('people').addEventListener('input', calc);
+  calc();
+</script>
+</body>
+</html>

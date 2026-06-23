@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全角↔半角変換</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+  textarea {
+    width: 100%;
+    min-height: 160px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text);
+    resize: vertical;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .options {
+    display: flex; flex-wrap: wrap; gap: 14px 20px;
+    margin: 18px 0; font-size: 0.9rem; color: var(--sub);
+  }
+  .options label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+  button {
+    border: none; border-radius: 10px; padding: 12px 20px;
+    font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: opacity .15s, transform .05s;
+  }
+  button:active { transform: translateY(1px); }
+  .primary { background: var(--accent); color: #fff; }
+  .ghost { background: #eceef2; color: var(--text); }
+  button:hover { opacity: .9; }
+  .result-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 28px 0 8px;
+  }
+  .result-head .label { font-size: 0.85rem; color: var(--sub); }
+  .copy { background: #eceef2; color: var(--text); padding: 6px 14px; font-size: 0.8rem; border-radius: 8px; }
+  pre.result {
+    margin: 0; padding: 16px; min-height: 120px;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--card); white-space: pre-wrap; word-break: break-word;
+    font-family: inherit; font-size: 1rem; line-height: 1.7;
+  }
+  footer { margin-top: 28px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>全角↔半角変換</h1>
+    <p class="lead">英数字・記号・スペース・カタカナを、全角と半角でまとめて変換します。</p>
+
+    <textarea id="input" placeholder="ここにテキストを入力してください…"></textarea>
+
+    <div class="options">
+      <label><input type="checkbox" id="optAlnum" checked> 英数字</label>
+      <label><input type="checkbox" id="optSpace" checked> スペース</label>
+      <label><input type="checkbox" id="optKana" checked> カタカナ</label>
+    </div>
+
+    <div class="buttons">
+      <button class="primary" id="toHalf">→ 半角にする</button>
+      <button class="primary" id="toFull">→ 全角にする</button>
+      <button class="ghost" id="clear">クリア</button>
+    </div>
+
+    <div class="result-head">
+      <span class="label">変換結果</span>
+      <button class="copy" id="copy">コピー</button>
+    </div>
+    <pre class="result" id="result"></pre>
+
+    <footer>Day 2 / 100 — Zenkaku / Hankaku Converter</footer>
+  </div>
+
+<script>
+  const input = document.getElementById('input');
+  const result = document.getElementById('result');
+  const optAlnum = document.getElementById('optAlnum');
+  const optSpace = document.getElementById('optSpace');
+  const optKana = document.getElementById('optKana');
+
+  // 半角カタカナ → 全角カタカナの対応表（濁点・半濁点の合成も処理）
+  const kanaHalf = 'ｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾊﾋﾌﾍﾎ';
+  const kanaFull = 'カキクケコサシスセソタチツテトハヒフヘホ';
+  const dakuten = { 'ﾊ':'パ','ﾋ':'ピ','ﾌ':'プ','ﾍ':'ペ','ﾎ':'ポ' }; // 半濁点用
+
+  // 半角カナの基本対応表（濁点なしの文字）
+  const kanaMap = {
+    'ｱ':'ア','ｲ':'イ','ｳ':'ウ','ｴ':'エ','ｵ':'オ',
+    'ｶ':'カ','ｷ':'キ','ｸ':'ク','ｹ':'ケ','ｺ':'コ',
+    'ｻ':'サ','ｼ':'シ','ｽ':'ス','ｾ':'セ','ｿ':'ソ',
+    'ﾀ':'タ','ﾁ':'チ','ﾂ':'ツ','ﾃ':'テ','ﾄ':'ト',
+    'ﾅ':'ナ','ﾆ':'ニ','ﾇ':'ヌ','ﾈ':'ネ','ﾉ':'ノ',
+    'ﾊ':'ハ','ﾋ':'ヒ','ﾌ':'フ','ﾍ':'ヘ','ﾎ':'ホ',
+    'ﾏ':'マ','ﾐ':'ミ','ﾑ':'ム','ﾒ':'メ','ﾓ':'モ',
+    'ﾔ':'ヤ','ﾕ':'ユ','ﾖ':'ヨ',
+    'ﾗ':'ラ','ﾘ':'リ','ﾙ':'ル','ﾚ':'レ','ﾛ':'ロ',
+    'ﾜ':'ワ','ｦ':'ヲ','ﾝ':'ン',
+    'ｧ':'ァ','ｨ':'ィ','ｩ':'ゥ','ｪ':'ェ','ｫ':'ォ',
+    'ｬ':'ャ','ｭ':'ュ','ｮ':'ョ','ｯ':'ッ','ｰ':'ー','｡':'。','｢':'「','｣':'」','､':'、','･':'・'
+  };
+  // 全角カナ → 半角カナ（上の逆引き＋濁点・半濁点の分解）
+  const kanaMapRev = {};
+  for (const [h, f] of Object.entries(kanaMap)) kanaMapRev[f] = h;
+  const dakuFull = 'ガギグゲゴザジズゼゾダヂヅデドバビブベボヴ';
+  const dakuHalf = ['ｶﾞ','ｷﾞ','ｸﾞ','ｹﾞ','ｺﾞ','ｻﾞ','ｼﾞ','ｽﾞ','ｾﾞ','ｿﾞ','ﾀﾞ','ﾁﾞ','ﾂﾞ','ﾃﾞ','ﾄﾞ','ﾊﾞ','ﾋﾞ','ﾌﾞ','ﾍﾞ','ﾎﾞ','ｳﾞ'];
+  const handakuFull = 'パピプペポ';
+  const handakuHalf = ['ﾊﾟ','ﾋﾟ','ﾌﾟ','ﾍﾟ','ﾎﾟ'];
+
+  // 半角 → 全角に変換する
+  function toFull(text) {
+    let out = text;
+    if (optAlnum.checked) {
+      // 半角の英数字・記号（!～~）を全角にずらす（コード差は0xFEE0）
+      out = out.replace(/[!-~]/g, c => String.fromCharCode(c.charCodeAt(0) + 0xFEE0));
+    }
+    if (optSpace.checked) {
+      out = out.replace(/ /g, '　'); // 半角スペース → 全角スペース
+    }
+    if (optKana.checked) {
+      // 濁点・半濁点つきの2文字をまず処理し、その後1文字ずつ変換
+      dakuHalf.forEach((h, i) => { out = out.split(h).join(dakuFull[i]); });
+      handakuHalf.forEach((h, i) => { out = out.split(h).join(handakuFull[i]); });
+      out = out.replace(/[｡-ﾟ]/g, c => kanaMap[c] || c);
+    }
+    return out;
+  }
+
+  // 全角 → 半角に変換する
+  function toHalf(text) {
+    let out = text;
+    if (optKana.checked) {
+      // 濁点つきの全角カナを「半角カナ＋ﾞ」に分解
+      [...dakuFull].forEach((f, i) => { out = out.split(f).join(dakuHalf[i]); });
+      [...handakuFull].forEach((f, i) => { out = out.split(f).join(handakuHalf[i]); });
+      out = out.replace(/[ァ-ヶー。「」、・]/g, c => kanaMapRev[c] || c);
+    }
+    if (optAlnum.checked) {
+      // 全角の英数字・記号を半角に戻す
+      out = out.replace(/[！-～]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+    }
+    if (optSpace.checked) {
+      out = out.replace(/　/g, ' '); // 全角スペース → 半角スペース
+    }
+    return out;
+  }
+
+  document.getElementById('toHalf').addEventListener('click', () => {
+    result.textContent = toHalf(input.value);
+  });
+  document.getElementById('toFull').addEventListener('click', () => {
+    result.textContent = toFull(input.value);
+  });
+  document.getElementById('clear').addEventListener('click', () => {
+    input.value = ''; result.textContent = ''; input.focus();
+  });
+  document.getElementById('copy').addEventListener('click', async () => {
+    if (!result.textContent) return;
+    await navigator.clipboard.writeText(result.textContent);
+    const btn = document.getElementById('copy');
+    btn.textContent = 'コピーしました';
+    setTimeout(() => btn.textContent = 'コピー', 1200);
+  });
+</script>
+</body>
+</html>

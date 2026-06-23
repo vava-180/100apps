@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>カラーピッカー＆パレット</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #2c3038;
+    --sub: #7a8290;
+    --accent: #4f7cff;
+    --border: #e3e6eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic", Meiryo, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 40px 20px 60px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; }
+  .lead { color: var(--sub); font-size: 0.9rem; margin: 0 0 24px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 20px; }
+  .pick { display: flex; gap: 18px; align-items: center; }
+  .pick input[type="color"] {
+    width: 84px; height: 84px; border: none; background: none; cursor: pointer; padding: 0;
+  }
+  .pick input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border); border-radius: 14px; }
+  .pick input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .codes { flex: 1; display: grid; gap: 8px; }
+  .code-row { display: flex; align-items: center; gap: 10px; }
+  .code-row span.tag { width: 42px; font-size: 0.78rem; color: var(--sub); font-weight: 700; }
+  .code-row input {
+    flex: 1; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+    font-family: ui-monospace, Consolas, monospace; font-size: 0.92rem; outline: none;
+  }
+  .code-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.15); }
+  .code-row input.bad { border-color: #e74c3c; box-shadow: 0 0 0 3px rgba(231,76,60,.15); }
+  .code-row button {
+    border: none; background: #eceef2; color: var(--text); border-radius: 8px;
+    padding: 9px 13px; font-size: 0.8rem; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .code-row button:hover { opacity: .9; }
+  .code-row button.done { background: #1d8a4f; color: #fff; }
+
+  h2 { font-size: 1rem; margin: 0 0 12px; }
+  .palette { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .sw { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; }
+  .sw .chip { height: 64px; }
+  .sw .hex { font-size: 0.72rem; text-align: center; padding: 5px 2px; font-family: ui-monospace, Consolas, monospace; background: #fff; }
+  .group { margin-bottom: 18px; }
+  .group .gname { font-size: 0.82rem; color: var(--sub); margin-bottom: 8px; }
+  footer { margin-top: 24px; text-align: center; color: var(--sub); font-size: 0.8rem; }
+  @media (max-width: 520px) { .palette { grid-template-columns: repeat(3, 1fr); } .pick { flex-direction: column; align-items: stretch; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>カラーピッカー＆パレット</h1>
+    <p class="lead">色を選ぶと、HEX / RGB / HSL のコードと配色候補を表示します（ネット通信なし）。</p>
+
+    <div class="card">
+      <div class="pick">
+        <input type="color" id="picker" value="#4f7cff">
+        <div class="codes">
+          <div class="code-row"><span class="tag">HEX</span><input id="hex" value="#4F7CFF"><button data-target="hex">コピー</button></div>
+          <div class="code-row"><span class="tag">RGB</span><input id="rgb" readonly><button data-target="rgb">コピー</button></div>
+          <div class="code-row"><span class="tag">HSL</span><input id="hsl" readonly><button data-target="hsl">コピー</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>配色候補</h2>
+      <div class="group">
+        <div class="gname">明るさ違い（同じ色相のグラデーション）</div>
+        <div class="palette" id="shades"></div>
+      </div>
+      <div class="group">
+        <div class="gname">調和する色（色相をずらした組み合わせ）</div>
+        <div class="palette" id="harmony"></div>
+      </div>
+      <p class="lead" style="margin:8px 0 0;">スウォッチをクリックすると、その色を選び直せます。</p>
+    </div>
+
+    <footer>Day 13 / 100 — Color Picker & Palette</footer>
+  </div>
+
+<script>
+  const el = id => document.getElementById(id);
+
+  // ---- 色の変換（HEX ⇄ RGB ⇄ HSL）----
+
+  // "#4F7CFF" → {r,g,b}（0〜255）
+  function hexToRgb(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+
+  // {r,g,b} → "#4F7CFF"
+  function rgbToHex({ r, g, b }) {
+    const h = x => x.toString(16).padStart(2, '0');
+    return ('#' + h(r) + h(g) + h(b)).toUpperCase();
+  }
+
+  // {r,g,b}(0〜255) → {h,s,l}（h:0〜360, s/l:0〜100）
+  function rgbToHsl({ r, g, b }) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const d = max - min;
+    let h = 0;
+    if (d !== 0) {
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+      if (h < 0) h += 360;
+    }
+    const l = (max + min) / 2;
+    const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+    // 丸めずに返す（表示するときだけ丸める。丸めた値でパレットを作ると元色とズレるため）
+    return { h, s: s * 100, l: l * 100 };
+  }
+
+  // {h,s,l} → {r,g,b}
+  function hslToRgb({ h, s, l }) {
+    // 関数単体でも安全なように、値を正しい範囲に直しておく
+    h = ((h % 360) + 360) % 360;
+    s = Math.max(0, Math.min(100, s));
+    l = Math.max(0, Math.min(100, l));
+    s /= 100; l /= 100;
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+    const m = l - c / 2;
+    let r = 0, g = 0, b = 0;
+    if (h < 60)       { r = c; g = x; }
+    else if (h < 120) { r = x; g = c; }
+    else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; }
+    else if (h < 300) { r = x; b = c; }
+    else              { r = c; b = x; }
+    return { r: Math.round((r + m) * 255), g: Math.round((g + m) * 255), b: Math.round((b + m) * 255) };
+  }
+
+  // ---- 画面の更新 ----
+
+  // メインの色が決まったら、コード表示とパレットを作り直す
+  function update(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return;
+    const hsl = rgbToHsl(rgb);
+
+    el('picker').value = hex.toLowerCase();
+    el('hex').value = hex;
+    el('hex').classList.remove('bad');
+    el('rgb').value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+    // 表示用にここで丸める（H:0〜360, S/L:0〜100%）
+    el('hsl').value = `hsl(${Math.round(hsl.h)}, ${Math.round(hsl.s)}%, ${Math.round(hsl.l)}%)`;
+
+    buildShades(hsl);
+    buildHarmony(hsl);
+  }
+
+  // 明るさ(L)だけを変えた5色を作る
+  function buildShades(hsl) {
+    const host = el('shades'); host.innerHTML = '';
+    [85, 68, 50, 33, 18].forEach(l => {
+      const hex = rgbToHex(hslToRgb({ h: hsl.h, s: hsl.s, l }));
+      host.appendChild(swatch(hex));
+    });
+  }
+
+  // 色相(H)をずらした調和色（補色・三角配色など）を作る
+  function buildHarmony(hsl) {
+    const host = el('harmony'); host.innerHTML = '';
+    [0, 30, 180, 150, 210].forEach(shift => {
+      const h = (hsl.h + shift + 360) % 360;
+      const hex = rgbToHex(hslToRgb({ h, s: hsl.s, l: hsl.l }));
+      host.appendChild(swatch(hex));
+    });
+  }
+
+  // 1つのスウォッチ（色見本）を作る。クリックでその色を選び直せる
+  function swatch(hex) {
+    const d = document.createElement('div');
+    d.className = 'sw';
+    d.innerHTML = `<div class="chip" style="background:${hex}"></div><div class="hex">${hex}</div>`;
+    d.addEventListener('click', () => update(hex));
+    return d;
+  }
+
+  // ---- 入力イベント ----
+
+  el('picker').addEventListener('input', e => update(e.target.value.toUpperCase()));
+
+  // HEX欄は手入力もできる（正しい形なら反映）
+  el('hex').addEventListener('input', e => {
+    let v = e.target.value.trim();
+    if (!v.startsWith('#')) v = '#' + v;
+    if (/^#[0-9a-f]{6}$/i.test(v)) {
+      update(v.toUpperCase()); // 正しい形なら反映
+    } else {
+      el('hex').classList.add('bad'); // #RRGGBB の形になるまで赤くして知らせる
+    }
+  });
+
+  // コピーボタン
+  document.querySelectorAll('.code-row button').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const text = el(btn.dataset.target).value;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = '済'; btn.classList.add('done');
+        setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('done'); }, 1200);
+      } catch { /* コピー不可の環境では何もしない */ }
+    });
+  });
+
+  // 最初の表示
+  update('#4F7CFF');
+</script>
+</body>
+</html>
