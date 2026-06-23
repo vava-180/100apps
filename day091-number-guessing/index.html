@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day 091 数当てゲーム</title>
+  <style>
+    /* ===== 見た目の設定（CSS）===== */
+    :root {
+      --main: #4f46e5;     /* メインの色（むらさき） */
+      --hi: #ef4444;       /* 「大きすぎ」のヒント色（赤） */
+      --lo: #2563eb;       /* 「小さすぎ」のヒント色（青） */
+      --ok: #16a34a;       /* 「正解」の色（緑） */
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      margin: 0;
+      padding: 24px 16px;
+      display: flex;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      width: 100%;
+      max-width: 440px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      padding: 24px;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 4px; }
+    .sub { color: #6b7280; font-size: 0.9rem; margin: 0 0 20px; }
+
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: 0.85rem; color: #374151; margin-bottom: 6px; }
+    select, input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+    }
+    .row { display: flex; gap: 8px; }
+    .row input { flex: 1; }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--main);
+    }
+    button:hover { opacity: 0.92; }
+    button.ghost {
+      background: #fff;
+      color: var(--main);
+      border: 1px solid var(--main);
+    }
+
+    /* ヒントの表示エリア */
+    .message {
+      margin: 18px 0 8px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #f9fafb;
+      font-size: 1.05rem;
+      font-weight: 600;
+      text-align: center;
+      min-height: 1.6em;
+    }
+    .message.hi { color: var(--hi); background: #fef2f2; }
+    .message.lo { color: var(--lo); background: #eff6ff; }
+    .message.ok { color: var(--ok); background: #f0fdf4; }
+    .message.warn { color: #b45309; background: #fffbeb; }
+
+    .info { display: flex; justify-content: space-between; color: #6b7280; font-size: 0.9rem; }
+    .history { margin-top: 14px; font-size: 0.9rem; color: #4b5563; word-break: break-word; }
+    .footer { margin-top: 24px; text-align: center; color: #9ca3af; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔢 数当てゲーム</h1>
+    <p class="sub">コンピューターが決めた数字を、ヒントを頼りに当てよう！</p>
+
+    <!-- むずかしさ（数字の範囲）を選ぶ -->
+    <div class="field">
+      <label for="level">むずかしさ（数字の範囲）</label>
+      <select id="level">
+        <option value="100">やさしい（1〜100）</option>
+        <option value="500">ふつう（1〜500）</option>
+        <option value="1000">むずかしい（1〜1000）</option>
+      </select>
+    </div>
+
+    <!-- 数字を入力して「答える」 -->
+    <div class="field">
+      <label for="guess">数字を入力</label>
+      <div class="row">
+        <input type="number" id="guess" placeholder="例: 50" autocomplete="off" min="1" step="1">
+        <button id="guessBtn">答える</button>
+      </div>
+    </div>
+
+    <!-- ヒント表示 -->
+    <div class="message" id="message">1〜100 の数字を当ててね（Enterキーでも答えられます）</div>
+
+    <div class="info">
+      <span>挑戦した回数：<strong id="count">0</strong> 回</span>
+      <button class="ghost" id="resetBtn">新しいゲーム</button>
+    </div>
+
+    <div class="history" id="history"></div>
+
+    <p class="footer">100日100アプリチャレンジ Day 091 / 100</p>
+  </div>
+
+  <script>
+    // ===== ゲームのロジック（JavaScript）=====
+
+    // 画面の部品をまとめて取得しておく
+    const levelEl   = document.getElementById("level");
+    const guessEl   = document.getElementById("guess");
+    const guessBtn  = document.getElementById("guessBtn");
+    const resetBtn  = document.getElementById("resetBtn");
+    const messageEl = document.getElementById("message");
+    const countEl   = document.getElementById("count");
+    const historyEl = document.getElementById("history");
+
+    // ゲームの状態を覚えておく変数
+    let answer = 0;       // 当てる数字（コンピューターが決める）
+    let maxNum = 100;     // 数字の範囲の上限
+    let count = 0;        // 挑戦した回数
+    let tried = [];       // これまで入力した数字の記録
+    let cleared = false;  // 正解したかどうか（正解後は入力を止める）
+
+    // 新しいゲームを始める（答えを決め直し、画面を初期化する）
+    function newGame() {
+      // 選択値が壊れていても安全に動くよう、想定外なら 1〜100 に戻す
+      maxNum = Number(levelEl.value);
+      if (!Number.isInteger(maxNum) || maxNum < 1) {
+        maxNum = 100;
+        levelEl.value = "100";
+      }
+      // 1〜maxNum のランダムな整数を作る
+      answer = Math.floor(Math.random() * maxNum) + 1;
+      count = 0;
+      tried = [];
+      cleared = false;
+
+      countEl.textContent = "0";
+      historyEl.textContent = "";
+      guessEl.value = "";
+      guessEl.max = String(maxNum); // 入力欄の上限を範囲に合わせる
+      guessEl.disabled = false;
+      guessBtn.disabled = false;
+      setMessage(`1〜${maxNum} の数字を当ててね（Enterキーでも答えられます）`, "");
+      guessEl.focus();
+    }
+
+    // ヒント文を表示する（typeで色を切り替える）
+    function setMessage(text, type) {
+      messageEl.textContent = text;
+      messageEl.className = "message" + (type ? " " + type : "");
+    }
+
+    // 「答える」が押されたときの処理
+    function checkGuess() {
+      if (cleared) return; // 正解後は何もしない
+
+      // 入力欄の文字をそのまま受け取る
+      const raw = guessEl.value.trim();
+      if (raw === "") {
+        setMessage("数字を入力してください。", "warn");
+        return;
+      }
+
+      // 半角数字だけを受け付ける（小数・文字・指数表記 1e2 などを弾く）
+      if (!/^\d+$/.test(raw)) {
+        setMessage("半角数字の整数を入力してください。", "warn");
+        return;
+      }
+      const num = Number(raw);
+      if (num < 1 || num > maxNum) {
+        setMessage(`1〜${maxNum} の範囲で入力してください。`, "warn");
+        return;
+      }
+
+      // 同じ数字を二度入れたときは回数に数えない（やさしさ）
+      if (tried.includes(num)) {
+        setMessage(`${num} はもう試しました。別の数字をどうぞ。`, "warn");
+        guessEl.select(); // 次の入力をしやすく、選択状態にする
+        return;
+      }
+
+      // ここからが「当たり判定」。回数を1つ増やして記録する
+      count++;
+      tried.push(num);
+      countEl.textContent = count;
+      historyEl.textContent = "試した数字：" + tried.join(", ");
+
+      if (num === answer) {
+        // 正解！入力を止めて終了
+        setMessage(`🎉 正解！ ${answer} でした。${count} 回で当たりました！`, "ok");
+        cleared = true;
+        guessEl.disabled = true;
+        guessBtn.disabled = true;
+      } else if (num < answer) {
+        setMessage("⬆ もっと大きい数字だよ", "lo");
+        guessEl.select(); // 次の入力をしやすく、選択状態にする
+      } else {
+        setMessage("⬇ もっと小さい数字だよ", "hi");
+        guessEl.select();
+      }
+    }
+
+    // ===== ボタンやキー操作とロジックをつなぐ =====
+    guessBtn.addEventListener("click", checkGuess);
+    resetBtn.addEventListener("click", newGame);
+    levelEl.addEventListener("change", newGame); // むずかしさを変えたらやり直し
+
+    // Enterキーでも答えられるようにする
+    guessEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") checkGuess();
+    });
+
+    // 最初の1回。ページを開いたらすぐ遊べるようにゲームを始める
+    newGame();
+  </script>
+</body>
+</html>
