@@ -68,7 +68,7 @@
 > 並び順は Excel → PowerPoint → Outlook。
 
 ### Excel（Day 41–55）
-- [ ] Day 041 名簿からシート一括作成（Excel）
+- [x] Day 041 名簿からシート一括作成（Excel）
 - [ ] Day 042 複数ブック集約マクロ（Excel）
 - [ ] Day 043 重複行のハイライト／削除（Excel）
 - [ ] Day 044 セル文字の一括整形：トリム・全角半角（Excel）
