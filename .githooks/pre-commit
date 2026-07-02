@@ -1,0 +1,62 @@
+#!/bin/sh
+# =============================================================
+# pre-commit フック（コミット前の自動チェック）
+# 個人PCの絶対パスや、秘密情報っぽい文字列が混じっていたら
+# コミットを止めて教えてくれる安全装置です。
+#
+# 使い方（各PCで1回だけ設定）:
+#   git config core.hooksPath .githooks
+#
+# もし誤検知で、どうしてもこのままコミットしたいときは:
+#   git commit --no-verify
+# =============================================================
+
+ng=0
+
+# コミット対象のファイルを1つずつ調べる（新規・変更・追加のみ）
+files=$(git diff --cached --name-only --diff-filter=ACM)
+
+for f in $files; do
+  # このフック自身は検査しない（説明文に検知パターンが載っているため）
+  case "$f" in
+    .githooks/*) continue ;;
+  esac
+
+  # このファイルで「追加された行（+で始まる行）」だけを取り出す
+  added=$(git diff --cached -U0 --no-color -- "$f" | grep '^+' | grep -v '^+++')
+  [ -n "$added" ] || continue
+
+  # 説明用の例（プレースホルダー）は見逃す。本物の名前だけを止めたいため。
+  # 例: ユーザー名 / 名前 / username / <...> / 例: など
+  real=$(printf '%s\n' "$added" | grep -viE 'ユーザー名|名前|<[^>]*>|例[:：]|placeholder|USERNAME')
+
+  # --- 1. 個人PCの絶対パスを検出 ---
+  # 例: C:\Users\名前\...  /Users/名前/...  /home/名前/...
+  paths=$(printf '%s\n' "$real" | grep -E -i '[A-Za-z]:\\+Users\\+|/Users/[^/[:space:]]+|/home/[^/[:space:]]+')
+  if [ -n "$paths" ]; then
+    echo "🚫 [$f] 個人PCの絶対パスが含まれています（ユーザー名が公開される恐れ）:"
+    printf '%s\n' "$paths" | sed 's/^+/    /'
+    echo "   → 相対フォルダ名（例: note_object/）に書き換えてください。"
+    echo ""
+    ng=1
+  fi
+
+  # --- 2. 秘密情報っぽい文字列を検出 ---
+  # password/token/api key/secret などに値が代入されている行
+  secrets=$(printf '%s\n' "$real" | grep -E -i '(password|passwd|secret|api[_-]?key|token|access[_-]?key)[[:space:]]*[:=]')
+  if [ -n "$secrets" ]; then
+    echo "🚫 [$f] 秘密情報（パスワード/トークン/APIキー）っぽい行が含まれています:"
+    printf '%s\n' "$secrets" | sed 's/^+/    /'
+    echo "   → コミットから外してください。"
+    echo ""
+    ng=1
+  fi
+done
+
+if [ "$ng" -ne 0 ]; then
+  echo "コミットを中止しました。上の箇所を直してから、もう一度コミットしてください。"
+  echo "（誤検知で意図的に通したい場合のみ: git commit --no-verify）"
+  exit 1
+fi
+
+exit 0
